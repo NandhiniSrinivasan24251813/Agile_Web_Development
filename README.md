@@ -22,34 +22,49 @@ The application is designed to:
 
 
 **Key Features**:
-1. Introductory View
+1. User Authentication
+
+Sign up / Login / Logout
+
+Session management (Flask-Login or Flask sessions)
+
+Access control: only logged-in users can upload or manage data
+
+2. Introductory View
 Overview of the Epidemic Monitoring tool.
 
 Sign-up and login functionality.
 
 Motivation for data sharing in outbreak control.
 
-2. Upload Data View
+Access control: only logged-in users can upload or manage data.
+
+3. Upload Data View
 Users upload CSV or JSON files (e.g. date, suburb, cases).
+
+Required fields: location, latitude, longitude, date, case count, death count, etc.
 
 Optionally fill out a dynamic manual entry form.
 
 Real-time validation and data preview before submission.
 
-3. Visualize Data View
-Line and bar graphs for infection rates over time.
+4. Visualize Data View
+Chart view: 
+ 1.Line and bar graphs for infection rates over time. (Chart.js)
+ 2.Time-series, multi-series are available to users.
 
-Heatmaps and markers on geographic maps using Leaflet.js.
+Map View:
+ 1.Heatmaps and markers on geographic maps using Leaflet.js.
+ 2.Filters for region, time period, and severity(Markers sized or colored based on case count, serving as severity of the outbreak).
 
-Filters for region, time period, and severity.
-
-4. Share Data View
+5. Share Data View
 View previously uploaded datasets and their analyses.
 
-Select datasets and share with specific users.
+Select datasets and share with specific users -> Generate shareable links (e.g. /share/).
 
-Modify or revoke sharing permissions anytime.
+Modify or revoke sharing permissions anytime.(Optional A)
 
+Optional B: download chart/map snapshots as PNG
 
 **Design Philosophy:**
 Engaging:  	Uses a clean UI with Tailwind CSS, real-time feedback on uploads, and rich charts.
@@ -63,7 +78,7 @@ Intuitive:	Minimal-click workflows, form validation, and AJAX-driven interaction
 Frontend         HTML, CSS, jQuery
 Backend          Flask, SQLite
 Interactivity    AJAX
-Visualization    charts.js
+Visualization    charts.js, Leaflet.js
 
 
 **Project Structure (Example):**
