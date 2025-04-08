@@ -1,15 +1,15 @@
 # Agile_Web_Development
 
 
-Epidemic Monitoring – A Private Data Analytics & Sharing Platform
+**Epidemic Monitoring – A Private Data Analytics & Sharing Platform**
 
-Overview:
+**Overview:**
 Epidemic Monitoring is a secure, web-based data analytics tool that empowers individuals, health professionals, and local authorities to upload datasets related to infectious disease outbreaks, visualize epidemic trends geographically and statistically, and selectively share critical insights with others.
 
 This system transforms raw outbreak data (e.g. infection rates, hotspots) into meaningful insights, helping communities identify, understand, and respond to health crises while maintaining privacy and control over sensitive data.
 
 
-Purpose of the Application
+**Purpose of the Application**
 The application is designed to:
 
 1. Enable uploading of outbreak-related data (e.g. infections per suburb or GPS location).
@@ -21,7 +21,7 @@ The application is designed to:
 4. Respect privacy and control, ensuring that data remains secure and access is granted explicitly.
 
 
-Key Features:
+**Key Features**:
 1. Introductory View
 Overview of the Epidemic Monitoring tool.
 
@@ -51,7 +51,7 @@ Select datasets and share with specific users.
 Modify or revoke sharing permissions anytime.
 
 
-Design Philosophy:
+**Design Philosophy:**
 Engaging:  	Uses a clean UI with Tailwind CSS, real-time feedback on uploads, and rich charts.
 
 Effective: 	Delivers instant visualizations, daily/weekly trend analysis, and heatmaps.
@@ -59,14 +59,14 @@ Effective: 	Delivers instant visualizations, daily/weekly trend analysis, and he
 Intuitive:	Minimal-click workflows, form validation, and AJAX-driven interactions.
 
 
-Technologies Used:
+**Technologies Used:**
 Frontend         HTML, CSS, jQuery
 Backend          Flask, SQLite
 Interactivity    AJAX
 Visualization    charts.js
 
 
-Project Structure (Example):
+**Project Structure (Example):**
 epidemic_monitoring
 |
 |---app.py
@@ -78,8 +78,8 @@ epidemic_monitoring
 
 
 
-Planned Milestones:
-
+**Planned Milestones:
+**
 Task                              |     Week#
 --------------------------------------------------------------------------
 Repository + App Setup            |    1
@@ -99,8 +99,8 @@ Documentation + Testing           |    6
 
 
 
-Example CSV file Structure:
-
+**Example CSV file Structure:
+**
  Column Name	 |     Type	       |            Description
 --------------------------------------------------------------------------
 date	         | YYYY-MM-DD	   |   Date of record (e.g., 2025-04-08)
