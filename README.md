@@ -104,11 +104,11 @@ Documentation + Testing           |    6
  Column Name	 |     Type	       |            Description
 --------------------------------------------------------------------------
 date	         | YYYY-MM-DD	   |   Date of record (e.g., 2025-04-08)
-suburb	         | string	       |   Name of the suburb or region
+suburb	       | string	       |   Name of the suburb or region
 postcode	     | string	       |   4-digit postcode (e.g., 6000)
-cases	         | integer         |   Number of new confirmed cases
-deaths	         | integer	       |   Number of deaths on that day (optional)
-lat	             | float	       |   Latitude of the location (optional)
+cases	         | integer       |   Number of new confirmed cases
+deaths	       | integer	     |   Number of deaths on that day (optional)
+lat	           | float	       |   Latitude of the location (optional)
 long	         | float	       |   Longitude of the location
 
 
