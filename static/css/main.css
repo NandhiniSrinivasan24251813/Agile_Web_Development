@@ -1,0 +1,219 @@
+/* Custom styles for Epidemic Monitoring app */
+
+/* Tooltip styles */
+.tooltip {
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 200px;
+  text-align: center;
+  z-index: 1000;
+}
+
+.tooltip:after {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  margin-left: -8px;
+  width: 0;
+  height: 0;
+  border-bottom: 8px solid rgba(0, 0, 0, 0.8);
+  border-right: 8px solid transparent;
+  border-left: 8px solid transparent;
+}
+
+/* Animation for fade in/out */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Map container styling */
+#map-container {
+  z-index: 1;
+}
+
+/* Table styling enhancements */
+.data-table-container {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  position: sticky;
+  top: 0;
+  background-color: #f7fafc;
+  z-index: 10;
+}
+
+/* Custom scrollbar for tables */
+.data-table-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.data-table-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.data-table-container::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 3px;
+}
+
+.data-table-container::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
+}
+
+/* Loading spinner */
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border-left-color: #3182ce;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Form validation styles */
+input:invalid,
+select:invalid,
+textarea:invalid {
+  border-color: #f56565;
+}
+
+.validation-message {
+  font-size: 0.875rem;
+  color: #f56565;
+  margin-top: 0.25rem;
+}
+
+/* File input styling */
+input[type="file"] {
+  padding: 0.5rem;
+}
+
+input[type="file"]::-webkit-file-upload-button {
+  background-color: #e2e8f0;
+  border: none;
+  border-radius: 0.25rem;
+  padding: 0.5rem 1rem;
+  margin-right: 1rem;
+  cursor: pointer;
+}
+
+input[type="file"]::-webkit-file-upload-button:hover {
+  background-color: #cbd5e0;
+}
+
+/* Chart container responsive sizing */
+.chart-wrapper {
+  position: relative;
+  min-height: 300px;
+}
+
+@media (min-width: 768px) {
+  .chart-wrapper {
+    min-height: 400px;
+  }
+}
+
+/* Helper classes */
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.transition-all {
+  transition: all 0.3s ease;
+}
+
+/* Dropdown menu styling */
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  background-color: white;
+  min-width: 160px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  border-radius: 0.25rem;
+  z-index: 1000;
+}
+
+.dropdown-menu.show {
+  display: block;
+}
+
+.dropdown-item {
+  padding: 0.5rem 1rem;
+  display: block;
+  text-decoration: none;
+  color: #4a5568;
+}
+
+.dropdown-item:hover {
+  background-color: #f7fafc;
+}
+
+/* Severity color indicators */
+.severity-low {
+  background-color: rgba(72, 187, 120, 0.2);
+  border-left: 4px solid #48bb78;
+}
+
+.severity-medium {
+  background-color: rgba(237, 137, 54, 0.2);
+  border-left: 4px solid #ed8936;
+}
+
+.severity-high {
+  background-color: rgba(245, 101, 101, 0.2);
+  border-left: 4px solid #f56565;
+}
+
+/* Card hover effects */
+.card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Custom date picker styling */
+input[type="date"] {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-block;
+  position: relative;
+}
+
+/* Focus outline for accessibility */
+*:focus-visible {
+  outline: 2px solid #3182ce;
+  outline-offset: 2px;
+}
