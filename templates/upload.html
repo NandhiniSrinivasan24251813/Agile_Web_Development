@@ -1,0 +1,146 @@
+{% extends 'base.html' %} {% block title %}Upload Data - Epidemic Monitoring{%
+endblock %} {% block content %}
+<div class="max-w-3xl mx-auto">
+  <h1 class="text-3xl font-bold mb-6">Upload Epidemic Data</h1>
+
+  <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+    <h2 class="text-xl font-semibold mb-4">File Requirements</h2>
+
+    <div class="mb-4">
+      <h3 class="font-medium text-blue-700 mb-2">Accepted Formats</h3>
+      <ul class="list-disc ml-5 text-gray-700">
+        <li>CSV (Comma-Separated Values)</li>
+        <li>JSON (JavaScript Object Notation)</li>
+      </ul>
+    </div>
+
+    <div class="mb-4">
+      <h3 class="font-medium text-blue-700 mb-2">Required Fields</h3>
+      <ul class="list-disc ml-5 text-gray-700">
+        <li>
+          <strong>location</strong> - Name of the area (e.g., city, suburb,
+          district)
+        </li>
+        <li><strong>latitude</strong> - Geographic latitude coordinates</li>
+        <li><strong>longitude</strong> - Geographic longitude coordinates</li>
+        <li>
+          <strong>date</strong> - Date of data collection (YYYY-MM-DD format)
+        </li>
+        <li><strong>cases</strong> - Number of cases reported</li>
+      </ul>
+    </div>
+
+    <div>
+      <h3 class="font-medium text-blue-700 mb-2">Optional Fields</h3>
+      <ul class="list-disc ml-5 text-gray-700">
+        <li><strong>deaths</strong> - Number of deaths reported</li>
+        <li><strong>recovered</strong> - Number of recovered cases</li>
+        <li><strong>hospitalized</strong> - Number of hospitalized cases</li>
+        <li><strong>tested</strong> - Number of tests performed</li>
+        <li>
+          <strong>severity</strong> - Qualitative assessment of outbreak
+          severity
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="bg-white p-6 rounded-lg shadow-md">
+    <h2 class="text-xl font-semibold mb-4">Upload Your Dataset</h2>
+
+    <form
+      method="POST"
+      action="{{ url_for('upload') }}"
+      enctype="multipart/form-data"
+      id="upload-form"
+    >
+      <div class="mb-4">
+        <label for="name" class="block text-gray-700 font-medium mb-2"
+          >Dataset Name</label
+        >
+        <input
+          type="text"
+          id="name"
+          name="name"
+          required
+          class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <div class="mb-4">
+        <label for="description" class="block text-gray-700 font-medium mb-2"
+          >Description (optional)</label
+        >
+        <textarea
+          id="description"
+          name="description"
+          rows="3"
+          class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        ></textarea>
+      </div>
+
+      <div class="mb-6">
+        <label for="file" class="block text-gray-700 font-medium mb-2"
+          >Dataset File (CSV or JSON)</label
+        >
+        <input
+          type="file"
+          id="file"
+          name="file"
+          accept=".csv, .json"
+          required
+          class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <p class="text-sm text-gray-500 mt-1">Maximum file size: 16MB</p>
+      </div>
+
+      <!-- Data Preview Section (hidden by default) -->
+      <div
+        id="data-preview"
+        class="mb-6 border rounded-lg p-4 bg-gray-50 hidden"
+      >
+        <h3 class="font-medium text-blue-700 mb-2">Data Preview</h3>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-100">
+              <tr id="preview-header"></tr>
+            </thead>
+            <tbody
+              class="bg-white divide-y divide-gray-200"
+              id="preview-body"
+            ></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Validation Results (hidden by default) -->
+      <div id="validation-results" class="mb-6 hidden"></div>
+
+      <div class="flex justify-end">
+        <button
+          type="submit"
+          class="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300 flex items-center"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5 mr-2"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+            />
+          </svg>
+          Upload Dataset
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script src="{{ url_for('static', filename='js/upload.js') }}"></script>
+{% endblock %}
