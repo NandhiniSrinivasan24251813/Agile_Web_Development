@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - Epidemic Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container auth-container">
+    <div class="auth-logo">
+        <i class="bi bi-shield-check text-primary" style="font-size: 3rem;"></i>
+        <h2 class="mt-2">Epidemic Monitoring</h2>
+    </div>
+    
+    <div class="card auth-card">
+        <div class="card-body">
+            <h3 class="card-title text-center mb-4">Sign In</h3>
+
+            <form method="POST" action="{{ url_for('login') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-person"></i></span>
+                        <input type="text" class="form-control" id="username" name="username" required autofocus>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                </div>
+                
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me">
+                    <label class="form-check-label" for="remember_me">Remember me</label>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+                    </button>
+                </div>
+                
+                <div class="text-center mt-3">
+                    <a href="#" class="text-decoration-none">Forgot your password?</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="text-center mt-3">
+        <p>Don't have an account? <a href="{{ url_for('signup') }}" class="text-decoration-none">Sign up</a></p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Basic form validation
+        $('form').on('submit', function(e) {
+            const username = $('#username').val().trim();
+            const password = $('#password').val().trim();
+            
+            if (username === '') {
+                e.preventDefault();
+                $('#username').addClass('is-invalid');
+                $('<div class="invalid-feedback">Username is required</div>').insertAfter('#username');
+                return false;
+            }
+            
+            if (password === '') {
+                e.preventDefault();
+                $('#password').addClass('is-invalid');
+                $('<div class="invalid-feedback">Password is required</div>').insertAfter('#password');
+                return false;
+            }
+            
+            return true;
+        });
+        
+        // Remove validation errors when typing
+        $('.form-control').on('input', function() {
+            $(this).removeClass('is-invalid');
+            $(this).next('.invalid-feedback').remove();
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign Up - Epidemic Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container auth-container">
+    <div class="auth-logo">
+        <i class="bi bi-shield-check text-primary" style="font-size: 3rem;"></i>
+        <h2 class="mt-2">Epidemic Monitoring</h2>
+    </div>
+    
+    <div class="card auth-card">
+        <div class="card-body">
+            <h3 class="card-title text-center mb-4">Create Account</h3>
+
+            <form method="POST" action="{{ url_for('signup') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-person"></i></span>
+                        <input type="text" class="form-control" id="username" name="username" required autofocus>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="confirm_password" class="form-label">Confirm Password</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted">
+                        Password must be at least 8 characters long and contain a mix of letters, numbers, and symbols for better security.
+                    </small>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-person-plus me-2"></i>Create Account
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="text-center mt-3">
+        <p>Already have an account? <a href="{{ url_for('login') }}" class="text-decoration-none">Sign in</a></p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Form validation
+        $('form').on('submit', function(e) {
+            let isValid = true;
+            
+            // Clear previous errors
+            $('.is-invalid').removeClass('is-invalid');
+            $('.invalid-feedback').remove();
+            
+            // Validate username
+            const username = $('#username').val().trim();
+            if (username === '') {
+                isValid = false;
+                $('#username').addClass('is-invalid');
+                $('<div class="invalid-feedback">Username is required</div>').insertAfter('#username');
+            }
+            
+            // Validate email
+            const email = $('#email').val().trim();
+            if (email === '') {
+                isValid = false;
+                $('#email').addClass('is-invalid');
+                $('<div class="invalid-feedback">Email is required</div>').insertAfter('#email');
+            } else if (!isValidEmail(email)) {
+                isValid = false;
+                $('#email').addClass('is-invalid');
+                $('<div class="invalid-feedback">Please enter a valid email address</div>').insertAfter('#email');
+            }
+            
+            // Validate password
+            const password = $('#password').val();
+            if (password === '') {
+                isValid = false;
+                $('#password').addClass('is-invalid');
+                $('<div class="invalid-feedback">Password is required</div>').insertAfter('#password');
+            } else if (password.length < 8) {
+                isValid = false;
+                $('#password').addClass('is-invalid');
+                $('<div class="invalid-feedback">Password must be at least 8 characters long</div>').insertAfter('#password');
+            }
+            
+            // Validate password confirmation
+            const confirmPassword = $('#confirm_password').val();
+            if (confirmPassword === '') {
+                isValid = false;
+                $('#confirm_password').addClass('is-invalid');
+                $('<div class="invalid-feedback">Please confirm your password</div>').insertAfter('#confirm_password');
+            } else if (confirmPassword !== password) {
+                isValid = false;
+                $('#confirm_password').addClass('is-invalid');
+                $('<div class="invalid-feedback">Passwords do not match</div>').insertAfter('#confirm_password');
+            }
+            
+            if (!isValid) {
+                e.preventDefault();
+                return false;
+            }
+            
+            return true;
+        });
+        
+        // Remove validation errors when typing
+        $('.form-control').on('input', function() {
+            $(this).removeClass('is-invalid');
+            $(this).next('.invalid-feedback').remove();
+        });
+        
+        // Email validation helper
+        function isValidEmail(email) {
+            const regex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
+            return regex.test(email);
+        }
+    });
+</script>
+{% endblock %}
