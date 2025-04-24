@@ -14,12 +14,8 @@ $(document).ready(function () {
     const tabId = $(this).data("tab");
 
     // Update active tab button
-    $(".tab-button")
-      .removeClass("border-blue-600 text-blue-600")
-      .addClass("border-transparent");
-    $(this)
-      .addClass("border-blue-600 text-blue-600")
-      .removeClass("border-transparent");
+    $(".tab-button").removeClass("active");
+    $(this).addClass("active");
 
     // Show active tab content
     $(".tab-content").removeClass("active");
@@ -65,7 +61,7 @@ $(document).ready(function () {
   // Function to fetch dataset
   function fetchDataset() {
     $.ajax({
-      url: `/api/dataset/${datasetId}`,
+      url: `/api/dataset/${datasetId}/records`,
       type: "GET",
       success: function (data) {
         rawData = data;
@@ -101,7 +97,7 @@ $(document).ready(function () {
     // Add header row
     columns.forEach(function (column) {
       dataHeader.append(
-        `<th class="px-4 py-2 text-left text-sm font-medium text-gray-800">${column}</th>`
+        `<th class="align-middle">${column}</th>`
       );
     });
 
@@ -112,9 +108,7 @@ $(document).ready(function () {
 
       columns.forEach(function (column) {
         tableRow.append(
-          `<td class="px-4 py-2 text-sm text-gray-700">${
-            row[column] || ""
-          }</td>`
+          `<td>${row[column] || ""}</td>`
         );
       });
 
@@ -125,7 +119,7 @@ $(document).ready(function () {
     if (data.length > 100) {
       dataBody.append(`
                 <tr>
-                    <td colspan="${columns.length}" class="px-4 py-2 text-sm text-gray-500 text-center">
+                    <td colspan="${columns.length}" class="text-center text-muted">
                         Showing 100 of ${data.length} rows
                     </td>
                 </tr>
@@ -313,8 +307,8 @@ $(document).ready(function () {
         const markerSize = calculateMarkerSize(value);
         const marker = L.circleMarker([lat, lng], {
           radius: markerSize,
-          fillColor: "#3182ce",
-          color: "#2c5282",
+          fillColor: "#0d6efd",
+          color: "#0a58ca",
           weight: 1,
           opacity: 1,
           fillOpacity: 0.7,
@@ -359,7 +353,7 @@ $(document).ready(function () {
       heatmapData.forEach(function (point) {
         const marker = L.circleMarker([point[0], point[1]], {
           radius: calculateMarkerSize(point[2]),
-          fillColor: "#f56565",
+          fillColor: "#dc3545",
           color: "transparent",
           fillOpacity: 0.7,
         });
@@ -411,14 +405,14 @@ $(document).ready(function () {
   // Helper function to get color for chart
   function getColorForIndex(index, alpha = 1) {
     const colors = [
-      `rgba(49, 130, 206, ${alpha})`, // blue
-      `rgba(245, 101, 101, ${alpha})`, // red
-      `rgba(72, 187, 120, ${alpha})`, // green
-      `rgba(237, 137, 54, ${alpha})`, // orange
-      `rgba(128, 90, 213, ${alpha})`, // purple
-      `rgba(56, 178, 172, ${alpha})`, // teal
-      `rgba(246, 173, 85, ${alpha})`, // yellow
-      `rgba(203, 213, 224, ${alpha})`, // gray
+      `rgba(13, 110, 253, ${alpha})`, // primary
+      `rgba(220, 53, 69, ${alpha})`,  // danger
+      `rgba(25, 135, 84, ${alpha})`,  // success
+      `rgba(255, 193, 7, ${alpha})`,  // warning
+      `rgba(111, 66, 193, ${alpha})`, // purple
+      `rgba(23, 162, 184, ${alpha})`, // info
+      `rgba(108, 117, 125, ${alpha})`,// secondary
+      `rgba(52, 58, 64, ${alpha})`,   // dark
     ];
 
     return colors[index % colors.length];

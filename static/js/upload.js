@@ -5,8 +5,8 @@ $(document).ready(function () {
     if (!file) return;
 
     // Clear previous validation results
-    $("#validation-results").empty().addClass("hidden");
-    $("#data-preview").addClass("hidden");
+    $("#validation-results").empty().addClass("d-none");
+    $("#data-preview").addClass("d-none");
 
     // Only validate CSV files
     if (file.name.endsWith(".csv")) {
@@ -20,10 +20,7 @@ $(document).ready(function () {
 
     // Show loading indicator
     $('button[type="submit"]').prop("disabled", true).html(`
-            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
+            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
             Uploading...
         `);
   });
@@ -35,12 +32,9 @@ $(document).ready(function () {
 
     // Show loading indicator
     const validationResults = $("#validation-results");
-    validationResults.removeClass("hidden").html(`
-                <div class="flex items-center text-blue-600">
-                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
+    validationResults.removeClass("d-none").html(`
+                <div class="text-primary d-flex align-items-center">
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                     Validating file...
                 </div>
             `);
@@ -56,8 +50,8 @@ $(document).ready(function () {
         if (response.valid) {
           // Show success message
           validationResults.html(`
-                        <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4">
-                            <p class="font-medium">File is valid!</p>
+                        <div class="alert alert-success">
+                            <h5 class="alert-heading">File is valid!</h5>
                             <p>${response.message}</p>
                         </div>
                     `);
@@ -67,8 +61,8 @@ $(document).ready(function () {
         } else {
           // Show error message
           validationResults.html(`
-                        <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4">
-                            <p class="font-medium">Validation Failed</p>
+                        <div class="alert alert-danger">
+                            <h5 class="alert-heading">Validation Failed</h5>
                             <p>${response.message}</p>
                         </div>
                     `);
@@ -77,8 +71,8 @@ $(document).ready(function () {
       error: function (xhr, status, error) {
         // Show error message
         validationResults.html(`
-                    <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4">
-                        <p class="font-medium">Error</p>
+                    <div class="alert alert-danger">
+                        <h5 class="alert-heading">Error</h5>
                         <p>An error occurred while validating the file. Please try again.</p>
                     </div>
                 `);
@@ -99,7 +93,7 @@ $(document).ready(function () {
     // Add header row
     columns.forEach(function (column) {
       previewHeader.append(
-        `<th class="px-4 py-2 text-left text-sm font-medium text-gray-800">${column}</th>`
+        `<th scope="col">${column}</th>`
       );
     });
 
@@ -109,9 +103,7 @@ $(document).ready(function () {
 
       columns.forEach(function (column) {
         tableRow.append(
-          `<td class="px-4 py-2 text-sm text-gray-700">${
-            row[column] || ""
-          }</td>`
+          `<td>${row[column] || ""}</td>`
         );
       });
 
@@ -119,6 +111,6 @@ $(document).ready(function () {
     });
 
     // Show the preview section
-    $("#data-preview").removeClass("hidden");
+    $("#data-preview").removeClass("d-none");
   }
 });

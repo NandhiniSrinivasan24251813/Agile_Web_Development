@@ -1,179 +1,99 @@
-{% extends 'base.html' %} {% block title %}Dashboard - Epidemic Monitoring{%
-endblock %} {% block content %}
+{% extends 'base.html' %}
+{% block title %}Dashboard - Epidemic Monitoring{% endblock %}
+
+{% block content %}
 <div>
-  <h1 class="text-3xl font-bold mb-6">Your Dashboard</h1>
+  <h1 class="h2 mb-4">Your Dashboard</h1>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-    <div class="bg-white p-6 rounded-lg shadow-md">
-      <h2 class="text-xl font-semibold mb-4 flex items-center">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-6 w-6 mr-2 text-blue-600"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
-          />
-        </svg>
-        Your Datasets
-      </h2>
-
-      {% if datasets %}
-      <div class="space-y-4">
-        {% for dataset in datasets %}
-        <div class="border rounded-lg p-4 hover:bg-gray-50">
-          <h3 class="font-semibold">{{ dataset.name }}</h3>
-          <p class="text-sm text-gray-600 mb-2">
-            Uploaded on {{ dataset.upload_date.strftime('%B %d, %Y') }}
-          </p>
-          <p class="text-sm mb-3">
-            {{ dataset.description or 'No description' }}
-          </p>
-          <div class="flex space-x-2">
-            <a
-              href="{{ url_for('visualize', dataset_id=dataset.id) }}"
-              class="text-blue-600 hover:underline text-sm flex items-center"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-4 w-4 mr-1"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
-              Visualize
-            </a>
-            <a
-              href="{{ url_for('share', dataset_id=dataset.id) }}"
-              class="text-green-600 hover:underline text-sm flex items-center"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-4 w-4 mr-1"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                />
-              </svg>
-              Share
-            </a>
-          </div>
+  <div class="row g-4 mb-4">
+    <div class="col-md-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-white">
+          <h2 class="h5 mb-0 d-flex align-items-center">
+            <i class="bi bi-database me-2 text-primary"></i>
+            Your Datasets
+          </h2>
         </div>
-        {% endfor %}
+        <div class="card-body">
+          {% if datasets %}
+            <div class="d-flex flex-column gap-3">
+              {% for dataset in datasets %}
+                <div class="card dashboard-card">
+                  <div class="card-body">
+                    <h3 class="h6 mb-1">{{ dataset.name }}</h3>
+                    <p class="text-muted small mb-2">
+                      Uploaded on {{ dataset.upload_date.strftime('%B %d, %Y') }}
+                    </p>
+                    <p class="small mb-3">
+                      {{ dataset.description or 'No description' }}
+                    </p>
+                    <div class="d-flex gap-2">
+                      <a href="{{ url_for('visualize', dataset_id=dataset.id) }}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-bar-chart me-1"></i>Visualize
+                      </a>
+                      <a href="{{ url_for('share', dataset_id=dataset.id) }}" class="btn btn-sm btn-outline-success">
+                        <i class="bi bi-share me-1"></i>Share
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center py-5">
+              <p class="text-muted mb-4">You haven't uploaded any datasets yet.</p>
+              <a href="{{ url_for('upload') }}" class="btn btn-primary">
+                <i class="bi bi-cloud-upload me-2"></i>Upload New Dataset
+              </a>
+            </div>
+          {% endif %}
+        </div>
       </div>
-      {% else %}
-      <div class="text-center py-8">
-        <p class="text-gray-500 mb-4">You haven't uploaded any datasets yet.</p>
-        <a
-          href="{{ url_for('upload') }}"
-          class="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition duration-300"
-        >
-          Upload New Dataset
-        </a>
-      </div>
-      {% endif %}
     </div>
 
-    <div class="bg-white p-6 rounded-lg shadow-md">
-      <h2 class="text-xl font-semibold mb-4 flex items-center">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="h-6 w-6 mr-2 text-green-600"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-          />
-        </svg>
-        Shared With You
-      </h2>
-
-      {% if shared_datasets %}
-      <div class="space-y-4">
-        {% for shared in shared_datasets %}
-        <div class="border rounded-lg p-4 hover:bg-gray-50">
-          <h3 class="font-semibold">{{ shared.dataset.name }}</h3>
-          <p class="text-sm text-gray-600 mb-2">
-            Shared by {{ shared.dataset.owner.username }} on {{
-            shared.share_date.strftime('%B %d, %Y') }}
-          </p>
-          <p class="text-sm mb-3">
-            {{ shared.dataset.description or 'No description' }}
-          </p>
-          <a
-            href="{{ url_for('visualize', dataset_id=shared.dataset_id) }}"
-            class="text-blue-600 hover:underline text-sm flex items-center"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-4 w-4 mr-1"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-              />
-            </svg>
-            Visualize
-          </a>
+    <div class="col-md-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header bg-white">
+          <h2 class="h5 mb-0 d-flex align-items-center">
+            <i class="bi bi-share me-2 text-success"></i>
+            Shared With You
+          </h2>
         </div>
-        {% endfor %}
+        <div class="card-body">
+          {% if shared_datasets %}
+            <div class="d-flex flex-column gap-3">
+              {% for shared in shared_datasets %}
+                <div class="card dashboard-card">
+                  <div class="card-body">
+                    <h3 class="h6 mb-1">{{ shared.dataset.name }}</h3>
+                    <p class="text-muted small mb-2">
+                      Shared by {{ shared.dataset.owner.username }} on {{ shared.share_date.strftime('%B %d, %Y') }}
+                    </p>
+                    <p class="small mb-3">
+                      {{ shared.dataset.description or 'No description' }}
+                    </p>
+                    <div>
+                      <a href="{{ url_for('visualize', dataset_id=shared.dataset_id) }}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-bar-chart me-1"></i>Visualize
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center py-5">
+              <p class="text-muted">No datasets have been shared with you yet.</p>
+            </div>
+          {% endif %}
+        </div>
       </div>
-      {% else %}
-      <div class="text-center py-8">
-        <p class="text-gray-500">No datasets have been shared with you yet.</p>
-      </div>
-      {% endif %}
     </div>
   </div>
 
-  <div class="flex justify-center">
-    <a
-      href="{{ url_for('upload') }}"
-      class="bg-blue-600 text-white py-3 px-6 rounded-lg text-lg hover:bg-blue-700 transition duration-300 flex items-center"
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="h-5 w-5 mr-2"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-        />
-      </svg>
-      Upload New Dataset
+  <div class="text-center">
+    <a href="{{ url_for('upload') }}" class="btn btn-primary btn-lg">
+      <i class="bi bi-cloud-upload me-2"></i>Upload New Dataset
     </a>
   </div>
 </div>

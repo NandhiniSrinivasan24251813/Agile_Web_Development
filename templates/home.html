@@ -1,5 +1,60 @@
 {% extends 'base.html' %}
-{% block title %}Home{% endblock %}
+{% block title %}Home - Epidemic Monitoring System{% endblock %}
+
 {% block content %}
-<h1 class="text-center">Flask is running!</h1>
+<div class="row justify-content-center">
+  <div class="col-md-8 text-center">
+    <div class="my-5">
+      <h1 class="display-4 mb-4">Welcome to the Epidemic Monitoring System</h1>
+      <p class="lead mb-4">Track, analyze, and visualize epidemic data with our comprehensive monitoring solution.</p>
+
+      {% if not current_user.is_authenticated %}
+        <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+          <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg px-4 me-md-2">
+            <i class="bi bi-box-arrow-in-right me-2"></i>Login
+          </a>
+          <a href="{{ url_for('signup') }}" class="btn btn-outline-primary btn-lg px-4">
+            <i class="bi bi-person-plus me-2"></i>Sign Up
+          </a>
+        </div>
+      {% else %}
+        <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+          <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg px-4">
+            <i class="bi bi-graph-up me-2"></i>Go to Dashboard
+          </a>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="row mt-5">
+      <div class="col-md-4 mb-4">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body text-center">
+            <i class="bi bi-graph-up text-primary" style="font-size: 2.5rem;"></i>
+            <h3 class="card-title mt-3">Track Data</h3>
+            <p class="card-text">Monitor epidemic trends with comprehensive data tracking and visualization tools.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4 mb-4">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body text-center">
+            <i class="bi bi-share text-primary" style="font-size: 2.5rem;"></i>
+            <h3 class="card-title mt-3">Share Insights</h3>
+            <p class="card-text">Collaborate with colleagues by securely sharing datasets and analysis results.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4 mb-4">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body text-center">
+            <i class="bi bi-shield-check text-primary" style="font-size: 2.5rem;"></i>
+            <h3 class="card-title mt-3">Stay Informed</h3>
+            <p class="card-text">Make data-driven decisions with our reliable epidemic monitoring platform.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

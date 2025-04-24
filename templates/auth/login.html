@@ -1,50 +1,45 @@
-{% extends 'base.html' %} {% block title %}Login - Epidemic Monitoring{%
-endblock %} {% block content %}
-<div class="max-w-md mx-auto bg-white p-8 rounded-lg shadow-md">
-  <h1 class="text-2xl font-bold mb-6 text-center">Login</h1>
+{% extends 'base.html' %}
+{% block title %}Login - Epidemic Monitoring{% endblock %}
 
-  <form method="POST" action="{{ url_for('login') }}">
-    <div class="mb-4">
-      <label for="username" class="block text-gray-700 font-medium mb-2"
-        >Username</label
-      >
-      <input
-        type="text"
-        id="username"
-        name="username"
-        required
-        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body p-4 p-md-5">
+                <h1 class="card-title text-center mb-4">Login</h1>
+
+                <form method="POST" action="{{ url_for('login') }}">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person"></i></span>
+                            <input type="text" id="username" name="username" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="password" class="form-label">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                            <input type="password" id="password" name="password" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>Login
+                        </button>
+                    </div>
+                </form>
+
+                <div class="text-center mt-4">
+                    <p class="text-muted">
+                        Don't have an account?
+                        <a href="{{ url_for('signup') }}" class="text-decoration-none">Sign up</a>
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <div class="mb-6">
-      <label for="password" class="block text-gray-700 font-medium mb-2"
-        >Password</label
-      >
-      <input
-        type="password"
-        id="password"
-        name="password"
-        required
-        class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
-    </div>
-
-    <button
-      type="submit"
-      class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300"
-    >
-      Login
-    </button>
-  </form>
-
-  <div class="mt-4 text-center">
-    <p class="text-gray-600">
-      Don't have an account?
-      <a href="{{ url_for('signup') }}" class="text-blue-600 hover:underline"
-        >Sign up</a
-      >
-    </p>
-  </div>
 </div>
 {% endblock %}
