@@ -10,5 +10,8 @@ MarkupSafe
 click
 itsdangerous
 python-dotenv
+<<<<<<< HEAD
 email-validator
 flask-wtf
+=======
+>>>>>>> e9b14bc (Update requirements.txt)
