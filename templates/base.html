@@ -31,6 +31,14 @@
       href="{{ url_for('static', filename='style.css') }}"
     />
 
+    <!---Google Fonts-->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap"
+      rel="stylesheet"
+    />
+
     {% block head %}{% endblock %}
 
     <style>
@@ -57,7 +65,7 @@
     {% if request.path == '/' %}
     <div class="loading-screen">
       <div class="loading-content">
-        <h1 class="loading-title">Epidemic Monitoring</h1>
+        <h1 class="loading-title">Epidemic Monitoring System</h1>
         <div class="loading-progress">
           <div class="progress-bar"></div>
         </div>
@@ -79,12 +87,13 @@
             <span class="contributor-name">Harpreet Singh</span>
           </div>
         </div>
-        <p class="loading-message">Loading your experience...</p>
+        <p class="loading-message">Loading the system...</p>
         <div style="margin-top: 20px; color: red">
-          <p>
+          <!-- for debugging -->
+          <!-- <p>
             If you're stuck on this screen, click
             <a href="#" id="force-continue">here</a> to continue.
-          </p>
+          </p> -->
         </div>
       </div>
     </div>
@@ -111,7 +120,7 @@
               href="{{ url_for('index') }}"
             >
               <i class="bi bi-shield-check me-2"></i>
-              Epidemic Monitoring
+              E M S
             </a>
 
             <button

@@ -116,7 +116,8 @@ body {
 }
 
 body {
-  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-family: "Roboto Mono", monospace;
+  font-style: normal;
   background-color: var(--bg-color);
   color: var(--text-primary);
   line-height: 1.6;
