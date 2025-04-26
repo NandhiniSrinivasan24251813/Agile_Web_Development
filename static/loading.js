@@ -1,9 +1,12 @@
+// reworked from the original code :)
 document.addEventListener("DOMContentLoaded", function () {
   const loadingScreen = document.querySelector(".loading-screen");
   const mainContent = document.querySelector(".main-content");
+  
+  if (!loadingScreen || !mainContent) return;
 
-  // Check if this is the homepage
-  const isHomepage =
+  // Checking homepage condition
+  const isHomepage = 
     window.location.pathname === "/" ||
     window.location.pathname === "/index" ||
     window.location.pathname === "/index.html";
@@ -11,31 +14,35 @@ document.addEventListener("DOMContentLoaded", function () {
   // Check if loading has been shown before
   const hasSeenLoading = localStorage.getItem("loadingShown") === "true";
 
-  // Immediately hide loading and show main content if not homepage or already seen
   if (!isHomepage || hasSeenLoading) {
-    console.log("Skipping loading animation");
     loadingScreen.style.display = "none";
     mainContent.style.display = "block";
     return;
   }
 
   // Show loading animation for first-time homepage visitors
-  console.log("Showing loading animation");
+  const ANIMATION_DURATION = 3500; // 3.5 seconds
+  const FALLBACK_TIMEOUT = 5000; // 5 seconds failsafe
 
-  // Set a timeout as a failsafe - if something goes wrong, still show content after 5 seconds
+  // Normal loading process with proper transition
   setTimeout(function () {
-    console.log("Failsafe timeout triggered");
-    loadingScreen.style.display = "none";
+    loadingScreen.classList.add("fade-out");
+    loadingScreen.addEventListener("transitionend", function() {
+      loadingScreen.style.display = "none";
+    }, { once: true });
+    
     mainContent.style.display = "block";
-  }, 5000);
-
-  // Regular loading animation process
-  setTimeout(function () {
-    console.log("Hiding loading screen");
-    loadingScreen.style.display = "none";
-    mainContent.style.display = "block";
-
+    mainContent.classList.add("fade-in");
+    
     // Mark as seen
     localStorage.setItem("loadingShown", "true");
-  }, 3000);
+  }, ANIMATION_DURATION);
+
+  // Failsafe in case the transition event doesn't fire
+  setTimeout(function () {
+    if (loadingScreen.style.display !== "none") {
+      loadingScreen.style.display = "none";
+      mainContent.style.display = "block";
+    }
+  }, FALLBACK_TIMEOUT);
 });

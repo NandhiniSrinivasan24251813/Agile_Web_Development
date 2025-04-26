@@ -115,7 +115,7 @@
         <!-- Navigation Bar -->
         <nav class="navbar navbar-expand-lg navbar-dark">
           <div class="container">
-            <a
+            
               class="navbar-brand d-flex align-items-center"
               href="{{ url_for('index') }}"
             >
@@ -150,7 +150,7 @@
                   <a class="nav-link" href="{{ url_for('upload') }}">Upload</a>
                 </li>
                 <li class="nav-item dropdown">
-                  <a
+                  
                     class="nav-link dropdown-toggle"
                     href="#"
                     id="userDropdown"
@@ -221,7 +221,7 @@
                 </a>
               </li>
               <li class="mb-1">
-                <a href="" class="text-light">
+                <a href="https://github.com/TerranConfederacy" class="text-light">
                   Terran Deng <i class="fab fa-github"></i>
                 </a>
               </li>
@@ -243,6 +243,9 @@
         </footer>
       </div>
     </div>
+
+    <!-- Loading Screen Script -->
+    <script src="{{ url_for('static', filename='loading.js') }}"></script>
 
     <!-- Theme Toggle Script -->
     <script>
@@ -318,27 +321,8 @@
           );
         }
 
-        // Only handle loading screen if we're on the homepage
-        if (window.location.pathname === "/") {
-          const loadingScreen = document.querySelector(".loading-screen");
-          const mainContent = document.querySelector(".main-content");
-
-          // Add emergency bypass for loading screen
-          const forceContinue = document.getElementById("force-continue");
-          if (forceContinue) {
-            forceContinue.addEventListener("click", function (e) {
-              e.preventDefault();
-              loadingScreen.style.display = "none";
-              mainContent.style.display = "block";
-            });
-          }
-
-          // Force hide loading after 4 seconds
-          setTimeout(function () {
-            loadingScreen.style.display = "none";
-            mainContent.style.display = "block";
-          }, 4000);
-        }
+        // The loading screen code has been moved to loading.js
+        // Force continue debugging link is still preserved in the HTML
       });
     </script>
 
