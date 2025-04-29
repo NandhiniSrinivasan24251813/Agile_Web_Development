@@ -3,6 +3,7 @@ from flask_login import LoginManager, current_user, login_required, login_user, 
 from models import db, User, AuditLog
 from flask_wtf.csrf import CSRFProtect
 from datetime import datetime
+from flask_migrate import Migrate
 
 from models import db, User, AuditLog, PasswordResetToken
 import secrets
@@ -14,6 +15,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///epidemic.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
+migrate = Migrate(app, db)
 csrf = CSRFProtect(app)
 
 login_manager = LoginManager()
@@ -236,8 +238,9 @@ def upload():
 # Main
 # --------------------------------------------
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
+    # with app.app_context():
+    #     db.create_all()
+    # using migrate instead of create_all to handle db migrations
     app.run(debug=True, host='0.0.0.0', port=8080)
 
 
