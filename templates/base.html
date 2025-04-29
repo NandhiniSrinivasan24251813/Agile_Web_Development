@@ -147,7 +147,7 @@
                   <a class="nav-link" href="{{ url_for('upload') }}">Upload</a>
                 </li>
                 <li class="nav-item dropdown">
-                  
+                  <a
                     class="nav-link dropdown-toggle"
                     href="#"
                     id="userDropdown"
@@ -178,6 +178,11 @@
                 </li>
                 <li class="nav-item">
                   <a class="nav-link" href="{{ url_for('signup') }}">Sign Up</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="{{ url_for('logout') }}">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                  </a>
                 </li>
                 {% endif %}
               </ul>
