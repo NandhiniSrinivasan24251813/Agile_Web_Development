@@ -16,13 +16,18 @@ function toggleTheme() {
   function updateThemeIcon(theme) {
     const themeToggleIcon = document.getElementById("theme-toggle-icon");
     if (themeToggleIcon) {
-      if (theme === "dark") {
-        themeToggleIcon.classList.remove("bi-moon");
-        themeToggleIcon.classList.add("bi-sun");
-      } else {
-        themeToggleIcon.classList.remove("bi-sun");
-        themeToggleIcon.classList.add("bi-moon");
-      }
+      // in case animation clashes, remove both classes first
+      themeToggleIcon.classList.remove("bi-moon");
+      themeToggleIcon.classList.remove("bi-sun");
+      
+      // Then add
+      setTimeout(() => {
+        if (theme === "dark") {
+          themeToggleIcon.classList.add("bi-sun");
+        } else {
+          themeToggleIcon.classList.add("bi-moon");
+        }
+      }, 10);
     }
   }
 
