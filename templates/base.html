@@ -155,9 +155,16 @@
                     data-bs-toggle="dropdown"
                     aria-expanded="false"
                   >
-                    <i class="bi bi-person-circle"></i> {{ current_user.username
-                    }}
+                    <i class="bi bi-person-circle"></i> {{ current_user.username }}
                   </a>
+                  <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                    <li><a class="dropdown-item" href="#">Profile</a></li>
+                    <li><a class="dropdown-item" href="#">Settings</a></li>
+                    <li><hr class="dropdown-divider" /></li>
+                    <li><a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a></li>
+                  </ul>
+                </li>
+                
                   <ul
                     class="dropdown-menu dropdown-menu-end"
                     aria-labelledby="userDropdown"
