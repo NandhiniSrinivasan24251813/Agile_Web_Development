@@ -15,6 +15,10 @@ class User(db.Model, UserMixin):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
     
+    datasets = db.relationship('Dataset', backref='owner', lazy=True)
+    shared_datasets = db.relationship('SharedDataset', backref='shared_user', lazy=True, foreign_keys='SharedDataset.shared_with_id')
+    audit_logs = db.relationship('AuditLog', backref='user', lazy=True)
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
         
@@ -36,6 +40,9 @@ class Dataset(db.Model):
     date_range_end = db.Column(db.Date)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     
+
+    epidemic_records = db.relationship('EpidemicRecord', backref='dataset', lazy=True)
+    shared_with = db.relationship('SharedDataset', backref='dataset', lazy=True)
 
 class EpidemicRecord(db.Model):
     __tablename__ = 'epidemic_records'
@@ -77,3 +84,19 @@ class PasswordResetToken(db.Model):
     token = db.Column(db.String(255))
     created_at = db.Column(db.DateTime)
     expires_at = db.Column(db.DateTime)
+
+
+
+class AuditLog(db.Model):
+    __tablename__ = 'audit_logs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    action = db.Column(db.String(100), nullable=False)  
+    target_type = db.Column(db.String(50))              
+    target_id = db.Column(db.Integer)                   
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    details = db.Column(db.Text)  
+
+    def __repr__(self):
+        return f'<AuditLog {self.action} by User {self.user_id} at {self.timestamp}>'

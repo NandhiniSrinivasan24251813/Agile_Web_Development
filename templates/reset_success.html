@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Password Reset Successful - Epidemic Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container auth-container">
+    <div class="card auth-card">
+        <div class="card-body text-center">
+            <i class="bi bi-shield-lock" style="font-size: 3rem; color: green;"></i>
+            <h3 class="card-title mt-3">Password Reset Successful!</h3>
+            <p class="lead">You can now log in with your new password.</p>
+
+            <div class="d-grid gap-2 mt-4">
+                <a href="{{ url_for('login') }}" class="btn btn-primary">
+                    Go to Login
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
