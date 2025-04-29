@@ -149,14 +149,16 @@ main.flex-grow-1 {
 /* Theme Toggle Styling */
 /* ===================== */
 .theme-toggle {
-  position: absolute;
-  top: 12px;
-  right: 80px;
+  position: fixed;
+  bottom: 20px; 
+  right: 20px;
   z-index: var(--z-fixed);
-  background: transparent;
+  background-color: var(--primary-color);
+  color: var(--text-light);
   border-radius: var(--radius-full);
-  padding: 0.5rem;
-  box-shadow: none;
+  width: 45px;
+  height: 45px;
+  box-shadow: var(--shadow-lg);
   border: none;
   display: flex;
   align-items: center;
@@ -166,9 +168,12 @@ main.flex-grow-1 {
 }
 
 .theme-toggle:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  transform: none;
-  box-shadow: none;
+  background-color: var(--primary-light);
+  box-shadow: var(--shadow-xl);
+}
+
+[data-theme="dark"] .theme-toggle:hover {
+  background-color: #444444; /* Darker shade for dark mode */
 }
 
 @media (max-width: 768px) {
@@ -181,8 +186,28 @@ main.flex-grow-1 {
 
 .theme-toggle-icon {
   font-size: 1.25rem;
-  color: var(--text-primary);
+  color: var(--text-light);
   transition: var(--transition-base);
+}
+
+.theme-toggle-icon.bi-sun {
+  animation: rotate-in 0.5s;
+}
+
+.theme-toggle-icon.bi-moon {
+  animation: rotate-in 0.5s;
+}
+
+/* animation */
+@keyframes rotate-in {
+  from {
+    transform: rotate(-180deg) scale(0.5);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(0) scale(1);
+    opacity: 1;
+  }
 }
 
 /* ===================== */
