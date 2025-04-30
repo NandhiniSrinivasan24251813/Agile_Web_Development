@@ -1838,6 +1838,12 @@ footer ul.list-unstyled li a:hover i {
   box-shadow: var(--shadow-lg);
 }
 
+.navbar .dropdown-toggle img {
+  object-fit: cover;
+  border: 1px solid #ccc;
+}
+
+
 /* ===================== */
 /* Flash Message Styling */
 /* ===================== */

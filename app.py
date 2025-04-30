@@ -7,12 +7,18 @@ from flask_migrate import Migrate
 
 from models import db, User, AuditLog, PasswordResetToken
 import secrets
+from forms import EditProfileForm
+from werkzeug.utils import secure_filename
+import os
+
 
 # Initialization
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-change-this'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///epidemic.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 db.init_app(app)
 migrate = Migrate(app, db)
@@ -215,6 +221,45 @@ def reset_password(token):
 @app.route('/reset_success')
 def reset_success():
     return render_template('reset_success.html')
+
+
+# Profile
+@app.route('/profile')
+@login_required
+def profile():
+    return render_template('profile.html', user=current_user)
+
+
+@app.route('/edit_profile', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    form = EditProfileForm(obj=current_user)
+
+    if form.validate_on_submit():
+        current_user.full_name = form.full_name.data
+        current_user.work_location = form.work_location.data  # renamed from location
+        current_user.bio = form.bio.data
+        current_user.dob = form.dob.data
+        current_user.mobile = form.mobile.data
+        current_user.address = form.address.data
+        current_user.postcode = form.postcode.data
+        current_user.city = form.city.data
+        current_user.last_seen = datetime.utcnow()
+
+        if form.profile_picture.data:
+            picture_file = secure_filename(form.profile_picture.data.filename)
+            picture_path = os.path.join(app.config['UPLOAD_FOLDER'], picture_file)
+            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+            form.profile_picture.data.save(picture_path)
+            current_user.profile_picture = picture_file
+
+        db.session.commit()
+        flash('Your profile has been updated.', 'success')
+        return redirect(url_for('profile'))
+
+    return render_template('edit_profile.html', form=form)
+
+
 
 
 
