@@ -1020,6 +1020,20 @@ a:hover {
   color: #3da9fc;
 }
 
+.forgot-link {
+  color: var(--gray-500);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.forgot-link:hover {
+  color:blue;
+  text-decoration-thickness: 2px;
+}
+
+
 /* Account status */
 .account-status {
   text-align: center;
@@ -1823,6 +1837,12 @@ footer ul.list-unstyled li a:hover i {
   border-color: var(--border-color);
   box-shadow: var(--shadow-lg);
 }
+
+.navbar .dropdown-toggle img {
+  object-fit: cover;
+  border: 1px solid #ccc;
+}
+
 
 /* ===================== */
 /* Flash Message Styling */

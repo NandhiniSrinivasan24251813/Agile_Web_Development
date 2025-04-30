@@ -7,14 +7,24 @@ db = SQLAlchemy()
 # from Nandhini's ERD
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
+    full_name = db.Column(db.String(120))
+    bio = db.Column(db.Text)
+    work_location = db.Column(db.String(100)) 
+    address = db.Column(db.String(255))
+    postcode = db.Column(db.String(20))
+    city = db.Column(db.String(100))
+    mobile = db.Column(db.String(20))
+    dob = db.Column(db.Date)
+    profile_picture = db.Column(db.String(255))
     
+    # Relationships
     datasets = db.relationship('Dataset', backref='owner', lazy=True)
     shared_datasets = db.relationship('SharedDataset', backref='shared_user', lazy=True, foreign_keys='SharedDataset.shared_with_id')
     audit_logs = db.relationship('AuditLog', backref='user', lazy=True)
