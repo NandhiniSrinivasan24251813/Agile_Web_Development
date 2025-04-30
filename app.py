@@ -10,6 +10,9 @@ import secrets
 from forms import EditProfileForm
 from werkzeug.utils import secure_filename
 import os
+import pandas as pd
+import numpy as np
+import json
 
 
 # Initialization
@@ -18,7 +21,12 @@ app.config['SECRET_KEY'] = 'your-secret-key-change-this'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///epidemic.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
+app.config['DATA_FOLDER'] = os.path.join('static', 'data')
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+
+# folders setup
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(app.config['DATA_FOLDER'], exist_ok=True)
 
 db.init_app(app)
 migrate = Migrate(app, db)

@@ -50,6 +50,11 @@ class Dataset(db.Model):
     date_range_end = db.Column(db.Date)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     
+    # New fields, 01/05/2025
+    filepath = db.Column(db.String(255))  
+    has_geo = db.Column(db.Boolean, default=False)  
+    has_time = db.Column(db.Boolean, default=False)  
+    sharing_status = db.Column(db.String(20), default='private')
 
     epidemic_records = db.relationship('EpidemicRecord', backref='dataset', lazy=True)
     shared_with = db.relationship('SharedDataset', backref='dataset', lazy=True)
