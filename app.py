@@ -5,7 +5,7 @@ from flask_wtf.csrf import CSRFProtect
 from datetime import datetime
 from flask_migrate import Migrate
 
-from models import db, User, AuditLog, PasswordResetToken
+from models import db, User, AuditLog, PasswordResetToken, Dataset, EpidemicRecord, SharedDataset
 import secrets
 from forms import EditProfileForm
 from werkzeug.utils import secure_filename
@@ -274,19 +274,161 @@ def edit_profile():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    # Example placeholder - you can load user's datasets later
-    user_datasets = []
-    shared_datasets = []
-    return render_template('dashboard.html',
-                           user_datasets=user_datasets,
-                           shared_datasets=shared_datasets)
+    # Quickfix 02/05/2025: Get datasets for the current user
+    user_datasets = Dataset.query.filter_by(user_id=current_user.id).order_by(Dataset.upload_date.desc()).all()
+    
+    # Print for debugging
+    print(f"Found {len(user_datasets)} datasets for user {current_user.username}")
+    
+    # Later!
+    shared_datasets = []  # Later!
+    
+    return render_template('dashboard.html', 
+                          user_datasets=user_datasets,
+                          shared_datasets=shared_datasets)
 
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
 def upload():
-    # Placeholder upload page
+    if request.method == 'POST':
+        # Check if file was included
+        if 'file' not in request.files:
+            flash('No file part', 'error')
+            return redirect(request.url)
+            
+        file = request.files['file']
+        
+        # Check if a file was selected
+        if file.filename == '':
+            flash('No file selected', 'error')
+            return redirect(request.url)
+            
+        # Validate file extension
+        if file and allowed_file(file.filename):
+            # Get form data
+            name = request.form.get('name')
+            description = request.form.get('description')
+            data_type = request.form.get('data_type', 'cases')
+            sharing_status = request.form.get('sharing_status', 'private')
+            has_geo = 'has_geo' in request.form
+            has_time = 'has_time' in request.form
+            
+            # Save file with timestamp to avoid name collisions
+            filename = secure_filename(file.filename)
+            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+            file_path = os.path.join(app.config['DATA_FOLDER'], f"{timestamp}_{filename}")
+            file.save(file_path)
+            
+            try:
+                # Process the file
+                df = None
+                
+                # Load based on file type
+                if filename.endswith('.csv'):
+                    df = pd.read_csv(file_path)
+                elif filename.endswith('.json'):
+                    df = pd.read_json(file_path)
+                elif filename.endswith('.xlsx') or filename.endswith('.xls'):
+                    df = pd.read_excel(file_path)
+                else:
+                    flash('Unsupported file format', 'error')
+                    return redirect(request.url)
+                
+                # Get record count
+                record_count = len(df)
+                
+                # Auto-detect geographic data if not explicitly set
+                lat_col = None
+                lon_col = None
+                
+                for col in df.columns:
+                    col_lower = col.lower()
+                    if col_lower in ['latitude', 'lat']:
+                        lat_col = col
+                    elif col_lower in ['longitude', 'long', 'lon', 'lng']:
+                        lon_col = col
+                
+                # Update has_geo based on detected columns
+                has_geo = has_geo or (lat_col is not None and lon_col is not None)
+                
+                # Auto-detect time series data if not explicitly set
+                date_col = None
+                date_range_start = None
+                date_range_end = None
+                
+                for col in df.columns:
+                    col_lower = col.lower()
+                    if 'date' in col_lower or 'time' in col_lower or 'day' in col_lower:
+                        date_col = col
+                        break
+                
+                # Process date data if found
+                if date_col:
+                    try:
+                        df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
+                        valid_dates = df[date_col].dropna()
+                        
+                        if not valid_dates.empty:
+                            date_range_start = valid_dates.min().date()
+                            date_range_end = valid_dates.max().date()
+                            has_time = True
+                    except Exception as e:
+                        # If date conversion fails, log but continue
+                        print(f"Error converting dates: {e}")
+                
+                # Create dataset record
+                new_dataset = Dataset(
+                    name=name,
+                    description=description,
+                    filename=filename,
+                    filepath=file_path,
+                    file_type=data_type,
+                    record_count=record_count,
+                    date_range_start=date_range_start,
+                    date_range_end=date_range_end,
+                    has_geo=has_geo,
+                    has_time=has_time,
+                    sharing_status=sharing_status,
+                    user_id=current_user.id,
+                    upload_date=datetime.utcnow()
+                )
+                
+                db.session.add(new_dataset)
+                db.session.commit()
+                
+                # Log the upload
+                audit = AuditLog(
+                    user_id=current_user.id,
+                    action="upload",
+                    target_type="Dataset",
+                    target_id=new_dataset.id,
+                    details=f"User uploaded dataset: {name}"
+                )
+                db.session.add(audit)
+                db.session.commit()
+                
+                flash('Dataset uploaded successfully!', 'success')
+                return redirect(url_for('dashboard'))
+                
+            except Exception as e:
+                # If there's an error, log and report back to user
+                db.session.rollback()
+                flash(f'Error processing file: {str(e)}', 'error')
+                print(f"Error processing upload: {str(e)}")
+                return redirect(request.url)
+        else:
+            flash('Invalid file type. Allowed types: CSV, JSON, Excel', 'error')
+            return redirect(request.url)
+    
     return render_template('upload.html')
 
+# --------------------------------------------
+# Helper Functions
+# --------------------------------------------
+def allowed_file(filename):
+    """Check if the file has an allowed extension"""
+    ALLOWED_EXTENSIONS = {'csv', 'json', 'xlsx', 'xls'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 # --------------------------------------------
 # Main
 # --------------------------------------------
