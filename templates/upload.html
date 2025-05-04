@@ -122,5 +122,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="url_for('static', filename='js/submission-handler.js')"></script>
+<script src="{{ url_for('static', filename='js/submission-handler.js') }}"></script>
 {% endblock %}

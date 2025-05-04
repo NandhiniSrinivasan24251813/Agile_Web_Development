@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash, request
+from flask import Flask, render_template, redirect, send_file, url_for, flash, request
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 from models import db, User, AuditLog
 from flask_wtf.csrf import CSRFProtect
@@ -13,6 +13,7 @@ import os
 import pandas as pd
 import numpy as np
 import json
+import io
 
 
 # Initialization
@@ -421,6 +422,146 @@ def upload():
             return redirect(request.url)
     
     return render_template('upload.html')
+
+@app.route('/visualize/<int:dataset_id>')
+@login_required
+def visualize(dataset_id):
+    # Get dataset
+    dataset = Dataset.query.get_or_404(dataset_id)
+    
+    # Check if user has access
+    is_owner = dataset.user_id == current_user.id
+    is_shared = False  # We'll implement sharing later
+    is_public = dataset.sharing_status == 'public'
+    
+    if not (is_owner or is_shared or is_public):
+        flash('You do not have access to this dataset', 'error')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        # Load dataset file
+        df = None
+        
+        if dataset.filepath and os.path.exists(dataset.filepath):
+            if dataset.filename.endswith('.csv'):
+                df = pd.read_csv(dataset.filepath)
+            elif dataset.filename.endswith('.json'):
+                df = pd.read_json(dataset.filepath)
+            elif dataset.filename.endswith('.xlsx') or dataset.filename.endswith('.xls'):
+                df = pd.read_excel(dataset.filepath)
+        else:
+            flash('Dataset file not found', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Prepare map data
+        map_data = []
+        
+        if dataset.has_geo:
+            # Find lat/lon columns
+            lat_col = next((col for col in df.columns if col.lower() in ['latitude', 'lat']), None)
+            lon_col = next((col for col in df.columns if col.lower() in ['longitude', 'long', 'lon', 'lng']), None)
+            
+            if lat_col and lon_col:
+                # Create map data dictionary
+                for _, row in df.iterrows():
+                    if pd.notna(row[lat_col]) and pd.notna(row[lon_col]):
+                        point = {}
+                        for col in df.columns:
+                            # For each column, add to point if not null
+                            if pd.notna(row[col]):
+                                # Convert numpy values to native Python types for JSON
+                                if isinstance(row[col], (pd.Timestamp, np.datetime64)):
+                                    point[col] = row[col].strftime('%Y-%m-%d')
+                                elif isinstance(row[col], (np.int64, np.int32, np.float64, np.float32)):
+                                    point[col] = float(row[col])
+                                else:
+                                    point[col] = row[col]
+                        map_data.append(point)
+        
+        # Get sample data for preview
+        preview_data = df.head(5).to_dict('records')
+        preview_columns = df.columns.tolist()
+        
+        # Get numeric fields for charts
+        numeric_fields = df.select_dtypes(include=[np.number]).columns.tolist()
+        
+        return render_template('visualize.html',
+                              dataset=dataset,
+                              preview_data=preview_data,
+                              preview_columns=preview_columns,
+                              map_data=json.dumps(map_data),
+                              numeric_fields=numeric_fields)
+    
+    except Exception as e:
+        flash(f'Error processing dataset: {str(e)}', 'error')
+        return redirect(url_for('dashboard'))
+
+# Simple Export Route
+@app.route('/export/<int:dataset_id>')
+@login_required
+def export_dataset(dataset_id):
+    # Get dataset
+    dataset = Dataset.query.get_or_404(dataset_id)
+    
+    # Check permission
+    is_owner = dataset.user_id == current_user.id
+    is_shared = False  # We'll implement sharing later
+    is_public = dataset.sharing_status == 'public'
+    
+    if not (is_owner or is_shared or is_public):
+        flash('You do not have access to this dataset!!!', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Get export format
+    export_format = request.args.get('format', 'csv')
+    
+    try:
+        # Load the file
+        df = None
+        
+        if dataset.filepath and os.path.exists(dataset.filepath):
+            if dataset.filename.endswith('.csv'):
+                df = pd.read_csv(dataset.filepath)
+            elif dataset.filename.endswith('.json'):
+                df = pd.read_json(dataset.filepath)
+            elif dataset.filename.endswith('.xlsx') or dataset.filename.endswith('.xls'):
+                df = pd.read_excel(dataset.filepath)
+        else:
+            flash('Dataset file not found', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Export based on format
+        if export_format == 'csv':
+            output = io.StringIO()
+            df.to_csv(output, index=False)
+            output.seek(0)
+            
+            return send_file(
+                io.BytesIO(output.getvalue().encode('utf-8')),
+                mimetype='text/csv',
+                as_attachment=True,
+                download_name=f"{dataset.name}_export.csv"
+            )
+        
+        elif export_format == 'json':
+            output = io.StringIO()
+            df.to_json(output, orient='records')
+            output.seek(0)
+            
+            return send_file(
+                io.BytesIO(output.getvalue().encode('utf-8')),
+                mimetype='application/json',
+                as_attachment=True,
+                download_name=f"{dataset.name}_export.json"
+            )
+        
+        else:
+            flash('Unsupported export format', 'error')
+            return redirect(url_for('visualize', dataset_id=dataset_id))
+            
+    except Exception as e:
+        flash(f'Error exporting dataset: {str(e)}', 'error')
+        return redirect(url_for('visualize', dataset_id=dataset_id))
 
 # --------------------------------------------
 # Helper Functions
