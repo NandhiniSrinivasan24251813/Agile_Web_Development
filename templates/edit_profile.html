@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Profile{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <h2 class="mb-4">Edit Profile</h2>
+  <form method="POST" enctype="multipart/form-data">
+    {{ form.hidden_tag() }}
+    <div class="row">
+      <!-- Left side -->
+      <div class="col-md-6">
+        <div class="mb-3">
+          {{ form.full_name.label(class="form-label") }}
+          {{ form.full_name(class="form-control") }}
+        </div>
+        <div class="mb-3">
+          {{ form.email.label(class="form-label") }}
+          {{ form.email(class="form-control", readonly=True) }}
+        </div>
+        <div class="mb-3">
+          {{ form.dob.label(class="form-label") }}
+          {{ form.dob(class="form-control", type="date") }}
+        </div>
+        <div class="mb-3">
+          {{ form.mobile.label(class="form-label") }}
+          {{ form.mobile(class="form-control") }}
+        </div>
+        <div class="mb-3">
+          {{ form.work_location.label(class="form-label") }}
+          {{ form.work_location(class="form-control") }}
+        </div>
+        <div class="mb-3">
+          {{ form.profile_picture.label(class="form-label") }}
+          {{ form.profile_picture(class="form-control") }}
+        </div>
+      </div>
+
+   
+      <div class="col-md-6">
+        <div class="mb-3">
+          {{ form.address.label(class="form-label") }}
+          {{ form.address(class="form-control") }}
+        </div>
+        <div class="mb-3">
+          {{ form.city.label(class="form-label") }}
+          {{ form.city(class="form-control") }}
+        </div>
+        <div class="mb-3">
+          {{ form.postcode.label(class="form-label") }}
+          {{ form.postcode(class="form-control") }}
+        </div>
+        <div class="mb-3">
+          {{ form.bio.label(class="form-label") }}
+          {{ form.bio(class="form-control", rows=4) }}
+        </div>
+      </div>
+    </div>
+    <div class="text-end">
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-save me-1"></i> Save Changes
+      </button>
+      <a href="{{ url_for('profile') }}" class="btn btn-secondary ms-2">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

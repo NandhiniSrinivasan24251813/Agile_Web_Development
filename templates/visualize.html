@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block title %}Visualize: {{ dataset.name }} - EMS{% endblock %}
+
+{% block head %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+      
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/map.css') }}"/>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ dataset.name }}</h1>
+            <p class="lead">{{ dataset.description }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Dashboard
+                </a>
+                <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-download"></i> Export
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="/export/{{ dataset.id }}?format=csv">CSV</a></li>
+                    <li><a class="dropdown-item" href="/export/{{ dataset.id }}?format=json">JSON</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Main visualization area -->
+        <div class="col-md-9">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5>Geographic Visualization</h5>
+                    <div>
+                        <select class="form-select form-select-sm" id="value-field" style="width: auto; display: inline-block;">
+                            <option value="cases">Cases</option>
+                            <option value="deaths">Deaths</option>
+                            <option value="recovered">Recovered</option>
+                            {% if 'tested' in numeric_fields %}
+                            <option value="tested">Tested</option>
+                            {% endif %}
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="map"></div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5>Data Preview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    {% for column in preview_columns %}
+                                    <th>{{ column }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in preview_data %}
+                                <tr>
+                                    {% for column in preview_columns %}
+                                    <td>{{ row[column] }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar with dataset info -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Dataset Information</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Type
+                            <span class="badge bg-primary">{{ dataset.file_type|capitalize }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Records
+                            <span class="badge bg-primary">{{ dataset.record_count }}</span>
+                        </li>
+                        {% if dataset.date_range_start %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Date Range
+                            <span>{{ dataset.date_range_start.strftime('%Y-%m-%d') }} to {{ dataset.date_range_end.strftime('%Y-%m-%d') }}</span>
+                        </li>
+                        {% endif %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Uploaded
+                            <span>{{ dataset.upload_date.strftime('%Y-%m-%d') }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Visibility
+                            <span>
+                                {% if dataset.sharing_status == 'public' %}
+                                <span class="badge bg-success">Public</span>
+                                {% elif dataset.sharing_status == 'private' %}
+                                <span class="badge bg-secondary">Private</span>
+                                {% else %}
+                                <span class="badge bg-primary">Limited</span>
+                                {% endif %}
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden data for JavaScript -->
+<div id="map-data" style="display: none;">{{ map_data|safe }}</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+{% endblock %}

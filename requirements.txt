@@ -13,3 +13,4 @@ python-dotenv
 email-validator
 flask-wtf
 Flask-Migrate
+wtform
