@@ -1,7 +1,15 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Load map data from hidden element
+    // Get map data from hidden element
     const mapData = JSON.parse(document.getElementById('map-data').textContent || '[]');
     const valueField = document.getElementById('value-field');
+    
+    // Map view toggle buttons
+    const markersViewBtn = document.getElementById('markers-view');
+    const clusterViewBtn = document.getElementById('cluster-view');
+    const heatmapViewBtn = document.getElementById('heatmap-view');
+    
+    // Current view state
+    let currentView = 'markers';
     
     // Initialize the map
     const map = L.map('map').setView([0, 0], 2);
@@ -11,15 +19,50 @@ document.addEventListener('DOMContentLoaded', function() {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
     
-    // Create a layer group for markers
-    // To do: add custom icon for markers -> atlas icon
-    const markersLayer = L.layerGroup().addTo(map);
+    // Create layer groups for different views
+    const markersLayer = L.layerGroup();
+    const clustersLayer = L.markerClusterGroup({
+        disableClusteringAtZoom: 12,
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: true,
+        zoomToBoundsOnClick: true
+    });
+    const heatLayer = L.layerGroup();
+    
+    // Function to set active view
+    function setActiveView(view) {
+        // Update current view
+        currentView = view;
+        
+        // Remove all layers
+        map.removeLayer(markersLayer);
+        map.removeLayer(clustersLayer);
+        map.removeLayer(heatLayer);
+        
+        // Update button states
+        markersViewBtn.classList.remove('active');
+        clusterViewBtn.classList.remove('active');
+        heatmapViewBtn.classList.remove('active');
+        
+        // Add selected layer and set active button
+        switch(view) {
+            case 'markers':
+                map.addLayer(markersLayer);
+                markersViewBtn.classList.add('active');
+                break;
+            case 'clusters':
+                map.addLayer(clustersLayer);
+                clusterViewBtn.classList.add('active');
+                break;
+            case 'heatmap':
+                map.addLayer(heatLayer);
+                heatmapViewBtn.classList.add('active');
+                break;
+        }
+    }
     
     // Function to render the map
     function renderMap() {
-        // Clear existing markers
-        markersLayer.clearLayers();
-        
         // If no data, exit
         if (!mapData || mapData.length === 0) {
             console.log("No map data to display");
@@ -65,6 +108,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Set map view to center of data points
         map.setView([centerLat, centerLng], 4);
         
+        // Clear existing layers
+        markersLayer.clearLayers();
+        clustersLayer.clearLayers();
+        heatLayer.clearLayers();
+        
         // Function to get color based on value
         function getColor(value) {
             // Red scale (light to dark)
@@ -76,15 +124,29 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Function to get radius based on value
         function getRadius(value) {
-            // Scale between 5 and 20 based on value
+            // Scale between a minimum of 5 and a maximum of 20 based on value
             const normalized = (value - minValue) / (maxValue - minValue) || 0;
             return 5 + (normalized * 15);
         }
         
-        // Add markers for each point
+        // Build marker layers
+        const heatData = [];
+        
         validPoints.forEach(point => {
+            const lat = parseFloat(point.latitude);
+            const lng = parseFloat(point.longitude);
             const value = parseFloat(point[selectedValue] || 0);
-            const circle = L.circleMarker([point.latitude, point.longitude], {
+            
+            // Skip if missing required data
+            if (isNaN(lat) || isNaN(lng) || isNaN(value)) return;
+            
+            // Add to heatmap data
+            // Intensity is normalized between 0.1 and 1.0
+            const intensity = ((value - minValue) / (maxValue - minValue)) * 0.9 + 0.1;
+            heatData.push([lat, lng, intensity]);
+            
+            // Create circle marker
+            const circle = L.circleMarker([lat, lng], {
                 radius: getRadius(value),
                 fillColor: getColor(value),
                 color: '#000',
@@ -94,23 +156,58 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             // Create popup content
-            let popupContent = `<strong>${point.location || 'Unknown'}</strong><br>`;
-            popupContent += `<strong>${selectedValue}:</strong> ${value}<br>`;
+            let popupContent = `<div style="min-width: 150px;">`;
+            popupContent += `<strong>${point.location || 'Unknown'}</strong><br>`;
             
+            // Add all available metrics
+            ['cases', 'deaths', 'recovered', 'tested', 'hospitalized'].forEach(metric => {
+                if (point[metric] !== undefined) {
+                    popupContent += `<strong>${metric.charAt(0).toUpperCase() + metric.slice(1)}:</strong> ${formatNumber(point[metric])}<br>`;
+                }
+            });
+            
+            // Add date if available
             if (point.date) {
                 popupContent += `<strong>Date:</strong> ${point.date}<br>`;
             }
             
+            popupContent += `</div>`;
+            
+            // Bind popup
             circle.bindPopup(popupContent);
+            
+            // Add to marker layer
             markersLayer.addLayer(circle);
+            
+            // Create a marker for the cluster layer (using L.marker instead of L.circleMarker)
+            const marker = L.marker([lat, lng]);
+            marker.bindPopup(popupContent);
+            clustersLayer.addLayer(marker);
         });
+        
+        // Create heatmap layer
+        if (heatData.length > 0) {
+            const heatmap = L.heatLayer(heatData, {
+                radius: 25,
+                blur: 15,
+                maxZoom: 10,
+                gradient: { 0.1: 'blue', 0.3: 'lime', 0.6: 'yellow', 1: 'red' }
+            });
+            heatLayer.addLayer(heatmap);
+        }
         
         // Create a legend
         const legend = L.control({position: 'bottomright'});
         
         legend.onAdd = function(map) {
             const div = L.DomUtil.create('div', 'map-legend');
-            const grades = [minValue, minValue + (maxValue-minValue)/4, minValue + (maxValue-minValue)/2, minValue + 3*(maxValue-minValue)/4, maxValue];
+            const grades = [
+                minValue, 
+                minValue + (maxValue-minValue)/4, 
+                minValue + (maxValue-minValue)/2, 
+                minValue + 3*(maxValue-minValue)/4, 
+                maxValue
+            ];
             
             // Add title
             div.innerHTML = `<strong>${selectedValue.charAt(0).toUpperCase() + selectedValue.slice(1)}</strong><br>`;
@@ -120,7 +217,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const roundedValue = Math.round(grades[i]);
                 div.innerHTML +=
                     `<div class="legend-item" style="background:${getColor(grades[i])}"></div> ` +
-                    roundedValue + (grades[i + 1] ? '&ndash;' + Math.round(grades[i + 1]) + '<br>' : '+');
+                    formatNumber(roundedValue) + (grades[i + 1] ? '&ndash;' + formatNumber(Math.round(grades[i + 1])) + '<br>' : '+');
             }
             
             return div;
@@ -130,12 +227,34 @@ document.addEventListener('DOMContentLoaded', function() {
         if (map.legend) {
             map.legend.remove();
         }
+        
         legend.addTo(map);
         map.legend = legend;
+        
+        // Set active view (will also add the appropriate layer to map)
+        setActiveView(currentView);
     }
     
-    // Update map when value field changes
+    // Helper function to format numbers with thousands separators
+    function formatNumber(value) {
+        return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+    
+    // Event listeners
     valueField.addEventListener('change', renderMap);
+    
+    // View toggle buttons
+    markersViewBtn.addEventListener('click', function() {
+        setActiveView('markers');
+    });
+    
+    clusterViewBtn.addEventListener('click', function() {
+        setActiveView('clusters');
+    });
+    
+    heatmapViewBtn.addEventListener('click', function() {
+        setActiveView('heatmap');
+    });
     
     // Initial render
     renderMap();

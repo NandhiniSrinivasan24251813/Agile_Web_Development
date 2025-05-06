@@ -24,6 +24,7 @@
 
 <!-- Custom CSS -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/map.css') }}"/>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/table-style.css') }}"/>
 
 <style>
   .tab-content {
@@ -83,10 +84,10 @@
                 <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left"></i> Back to Dashboard
                 </a>
-                <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="bi bi-download"></i> Export
                 </button>
-                <ul class="dropdown-menu dropdown-menu-end">
+                <ul class="dropdown-menu">
                     <li><a class="dropdown-item" href="/export/{{ dataset.id }}?format=csv">CSV</a></li>
                     <li><a class="dropdown-item" href="/export/{{ dataset.id }}?format=json">JSON</a></li>
                 </ul>
@@ -391,5 +392,5 @@
 <script src="{{ url_for('static', filename='js/dashboard-charts.js') }}"></script>
 
 <!-- Insights Generator Script -->
-<script src="{{ url_for('static', filename='js/Insights-generator.js') }}"></script>
+<script src="{{ url_for('static', filename='js/Insight-generator.js') }}"></script>
 {% endblock %}

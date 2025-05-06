@@ -14,6 +14,8 @@ import pandas as pd
 import numpy as np
 import json
 import io
+import json
+from flask import jsonify
 
 
 # Initialization
@@ -431,7 +433,7 @@ def visualize(dataset_id):
     
     # Check if user has access
     is_owner = dataset.user_id == current_user.id
-    is_shared = False  # We'll implement sharing later
+    is_shared = False  # not now ;)
     is_public = dataset.sharing_status == 'public'
     
     if not (is_owner or is_shared or is_public):
@@ -478,23 +480,131 @@ def visualize(dataset_id):
                                     point[col] = row[col]
                         map_data.append(point)
         
+        # Create a full dataset JSON for chart rendering
+        dataset_json = []
+        
+        for _, row in df.iterrows():
+            item = {}
+            for col in df.columns:
+                if pd.notna(row[col]):
+                    # Convert numpy values to native Python types for JSON
+                    if isinstance(row[col], (pd.Timestamp, np.datetime64)):
+                        item[col] = row[col].strftime('%Y-%m-%d')
+                    elif isinstance(row[col], (np.int64, np.int32, np.float64, np.float32)):
+                        item[col] = float(row[col])
+                    else:
+                        item[col] = row[col]
+            dataset_json.append(item)
+        
         # Get sample data for preview
-        preview_data = df.head(5).to_dict('records')
+        preview_data = df.head(10).to_dict('records')
         preview_columns = df.columns.tolist()
         
         # Get numeric fields for charts
         numeric_fields = df.select_dtypes(include=[np.number]).columns.tolist()
         
+        # Return enhanced template with additional data
         return render_template('visualize.html',
                               dataset=dataset,
                               preview_data=preview_data,
                               preview_columns=preview_columns,
                               map_data=json.dumps(map_data),
+                              dataset_json=json.dumps(dataset_json),
                               numeric_fields=numeric_fields)
     
     except Exception as e:
         flash(f'Error processing dataset: {str(e)}', 'error')
         return redirect(url_for('dashboard'))
+
+# Add a new API endpoint to get dataset statistics
+@app.route('/api/dataset/<int:dataset_id>/stats')
+@login_required
+def dataset_stats(dataset_id):
+    # Get dataset
+    dataset = Dataset.query.get_or_404(dataset_id)
+    
+    # Check if user has access
+    is_owner = dataset.user_id == current_user.id
+    is_shared = False  # We'll implement sharing later
+    is_public = dataset.sharing_status == 'public'
+    
+    if not (is_owner or is_shared or is_public):
+        return jsonify({'error': 'Access denied'}), 403
+    
+    try:
+        # Load dataset file
+        df = None
+        
+        if dataset.filepath and os.path.exists(dataset.filepath):
+            if dataset.filename.endswith('.csv'):
+                df = pd.read_csv(dataset.filepath)
+            elif dataset.filename.endswith('.json'):
+                df = pd.read_json(dataset.filepath)
+            elif dataset.filename.endswith('.xlsx') or dataset.filename.endswith('.xls'):
+                df = pd.read_excel(dataset.filepath)
+        else:
+            return jsonify({'error': 'Dataset file not found'}), 404
+        
+        # Get numeric columns
+        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+        
+        # Calculate statistics
+        stats = {}
+        for col in numeric_cols:
+            if col in ['cases', 'deaths', 'recovered', 'tested', 'hospitalized', 'active']:
+                col_stats = {
+                    'total': float(df[col].sum()),
+                    'mean': float(df[col].mean()),
+                    'median': float(df[col].median()),
+                    'min': float(df[col].min()),
+                    'max': float(df[col].max())
+                }
+                stats[col] = col_stats
+        
+        return jsonify(stats)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/delete_dataset/<int:dataset_id>', methods=['POST'])
+@login_required
+def delete_dataset(dataset_id):
+    # Get dataset
+    dataset = Dataset.query.get_or_404(dataset_id)
+    
+    # Check if user is the owner
+    if dataset.user_id != current_user.id:
+        flash('You can only delete datasets that you own', 'error')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        # Get file path
+        file_path = dataset.filepath
+        
+        # Delete from database
+        db.session.delete(dataset)
+        
+        # Create audit log
+        audit = AuditLog(
+            user_id=current_user.id,
+            action="delete",
+            target_type="Dataset",
+            target_id=dataset_id,
+            details=f"User deleted dataset: {dataset.name}"
+        )
+        db.session.add(audit)
+        db.session.commit()
+        
+        # Delete file from filesystem if it exists
+        if file_path and os.path.exists(file_path):
+            os.remove(file_path)
+        
+        flash('Dataset deleted successfully', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting dataset: {str(e)}', 'error')
+    
+    return redirect(url_for('dashboard'))
 
 # Simple Export Route
 @app.route('/export/<int:dataset_id>')

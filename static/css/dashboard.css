@@ -1,0 +1,20 @@
+.table .dropdown-menu.dropdown-menu-end.show {
+    position: fixed !important; /* Changed to fixed */
+    inset: auto !important;
+    transform: none !important;
+    right: auto !important; /* Let JavaScript position it  - WIP/
+    left: auto !important; /* Let JavaScript position it */
+    top: auto !important; /* Let JavaScript position it */ 
+    margin-top: 0.125rem !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 9999 !important; /* Much higher z-index */
+    box-shadow: 0 0 10px rgba(0,0,0,0.5) !important; /* Add shadow to see it better */
+}
+
+/* Eliminate potential interference from other elements */
+.table .dropdown-toggle.show {
+    position: relative !important;
+    z-index: 9998 !important;
+}
