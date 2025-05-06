@@ -1,147 +1,152 @@
-{% extends 'base.html' %} {% block title %}Dashboard - Epidemic Monitoring
-System{% endblock %} {% block content %}
-<div class="container py-4 fade-in">
-  <div class="row mb-4">
-    <div class="col">
-      <div class="d-flex justify-content-between align-items-center">
-        <h1 class="h2 mb-0 fade-in-up">Your Datasets</h1>
-        <a
-          href="{{ url_for('upload') }}"
-          class="btn btn-primary slide-in-right"
-        >
-          <i class="fas fa-upload me-2"></i>Upload Dataset
-        </a>
-      </div>
-    </div>
-  </div>
+{% extends 'base.html' %}
 
-  {% if current_user.datasets %}
-  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-    {% for dataset in current_user.datasets %}
-    <div
-      class="col card-animate"
-      style="animation-delay: {{ loop.index0 * 0.1 }}s"
-    >
-      <div class="card h-100 shadow-sm hover-shadow">
-        <div class="card-body">
-          <h5 class="card-title text-truncate mb-1">{{ dataset.name }}</h5>
-          <p class="text-muted small mb-2">
-            <i class="fas fa-table me-1"></i>{{
-            dataset.record_count|default('N/A', true) }} records
-          </p>
+{% block title %}Dashboard - Epidemic Monitoring System{% endblock %}
 
-          <p class="text-muted small mb-3">
-            <i class="fas fa-calendar me-1"></i>Uploaded: {{
-            dataset.upload_date.strftime('%d %b %Y') }}
-          </p>
-
-          {% if dataset.description %}
-          <p class="card-text small">{{ dataset.description|truncate(100) }}</p>
-          {% endif %}
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Dashboard</h1>
+            <p class="lead">Welcome, {{ current_user.username }}!</p>
         </div>
-        <div class="card-footer bg-transparent border-top-0 d-flex">
-          <a
-            href="{{ url_for('visualize', dataset_id=dataset.id) }}"
-            class="btn btn-sm btn-outline-primary flex-grow-1 me-1"
-          >
-            <i class="fas fa-chart-bar me-1"></i>Visualize
-          </a>
-          <a
-            href="{{ url_for('export_dataset', dataset_id=dataset.id) }}"
-            class="btn btn-sm btn-outline-secondary flex-grow-1 me-1"
-          >
-            <i class="fas fa-download me-1"></i>Export
-          </a>
-          <form
-            action="{{ url_for('delete_dataset', dataset_id=dataset.id) }}"
-            method="POST"
-            class="flex-grow-1"
-          >
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <button
-              type="submit"
-              class="btn btn-sm btn-outline-danger w-100"
-              onclick="return confirm('Are you sure you want to delete this dataset?');"
-            >
-              <i class="fas fa-trash me-1"></i>Delete
-            </button>
-          </form>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('upload') }}" class="btn btn-primary">
+                <i class="bi bi-upload"></i> Upload Dataset
+            </a>
         </div>
-      </div>
     </div>
-    {% endfor %}
-  </div>
-  {% else %}
-  <div class="row justify-content-center mt-5 fade-in-up">
-    <div class="col-md-8 col-lg-6">
-      <div class="card shadow-sm text-center py-5">
-        <div class="card-body">
-          <div class="mb-4">
-            <i class="fas fa-table fa-3x text-muted"></i>
-          </div>
-          <h4>No Datasets Yet</h4>
-          <p class="text-muted">
-            Upload your first dataset to begin exploring and visualizing
-            epidemiological data.
-          </p>
-          <a href="{{ url_for('upload') }}" class="btn btn-primary mt-3">
-            <i class="fas fa-upload me-2"></i>Upload Dataset
-          </a>
+    
+    <div class="row mt-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Your Datasets</h5>
+                    <a href="{{ url_for('upload') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-plus"></i> Add New
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if user_datasets %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Type</th>
+                                        <th>Date</th>
+                                        <th>Sharing</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for dataset in user_datasets %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ dataset.name }}</strong>
+                                            <div class="small text-muted">{{ dataset.description|truncate(50) }}</div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ dataset.file_type|capitalize }}</span>
+                                            {% if dataset.has_geo %}
+                                            <span class="badge bg-info">Geo</span>
+                                            {% endif %}
+                                            {% if dataset.has_time %}
+                                            <span class="badge bg-secondary">Time</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-nowrap">{{ dataset.upload_date.strftime('%Y-%m-%d') }}</td>
+                                        <td>
+                                            {% if dataset.sharing_status == 'public' %}
+                                            <span class="badge bg-success">Public</span>
+                                            {% elif dataset.sharing_status == 'private' %}
+                                            <span class="badge bg-secondary">Private</span>
+                                            {% else %}
+                                            <span class="badge bg-primary">Limited</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{{ url_for('visualize', dataset_id=dataset.id) }}" class="btn btn-primary">
+                                                    <i class="bi bi-graph-up"></i> View
+                                                </a>
+                                                <button type="button" class="btn btn-outline-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <span class="visually-hidden">Toggle Dropdown</span>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <li><a class="dropdown-item" href="/export/{{ dataset.id }}?format=csv">
+                                                        <i class="bi bi-download"></i> Export CSV</a>
+                                                    </li>
+                                                    <li><a class="dropdown-item" href="/export/{{ dataset.id }}?format=json">
+                                                        <i class="bi bi-download"></i> Export JSON</a>
+                                                    </li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li><a class="dropdown-item text-danger" href="#">
+                                                        <i class="bi bi-trash"></i> Delete</a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <div class="mb-3">
+                                <i class="bi bi-file-earmark-x" style="font-size: 3rem;"></i>
+                            </div>
+                            <p>You haven't uploaded any datasets yet.</p>
+                            <a href="{{ url_for('upload') }}" class="btn btn-primary">Upload Dataset</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  </div>
-  {% endif %} {% if shared_datasets %}
-  <div class="row mt-5 mb-4">
-    <div class="col">
-      <h2 class="h3 fade-in-up" style="animation-delay: 0.3s">
-        Shared With You
-      </h2>
-    </div>
-  </div>
-
-  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-    {% for dataset in shared_datasets %}
-    <div
-      class="col card-animate"
-      style="animation-delay: {{ (loop.index0 * 0.1) + 0.5 }}s"
-    >
-      <div class="card h-100 shadow-sm hover-shadow">
-        <!-- Similar content to the user's datasets but with owner info -->
-        <div class="card-body">
-          <div class="d-flex justify-content-between">
-            <h5 class="card-title text-truncate mb-1">{{ dataset.name }}</h5>
-            <span class="badge bg-info">Shared</span>
-          </div>
-          <p class="text-muted small mb-2">
-            <i class="fas fa-user me-1"></i>From: {{ dataset.owner.username }}
-          </p>
-          <p class="text-muted small mb-2">
-            <i class="fas fa-table me-1"></i>{{
-            dataset.record_count|default('N/A', true) }} records
-          </p>
-          <p class="text-muted small mb-3">
-            <i class="fas fa-calendar me-1"></i>Shared: {{
-            dataset.upload_date.strftime('%d %b %Y') }}
-          </p>
-
-          {% if dataset.description %}
-          <p class="card-text small">{{ dataset.description|truncate(100) }}</p>
-          {% endif %}
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Shared With You</h5>
+                </div>
+                <div class="card-body">
+                    {% if shared_datasets %}
+                        <ul class="list-group">
+                            {% for shared in shared_datasets %}
+                                <li class="list-group-item">{{ shared.dataset.name }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <div class="mb-3">
+                                <i class="bi bi-share" style="font-size: 2rem;"></i>
+                            </div>
+                            <p>No datasets have been shared with you.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Quick Links</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        <a href="{{ url_for('upload') }}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-upload me-2"></i> Upload New Dataset
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action">
+                            <i class="bi bi-map me-2"></i> Explore Global Map
+                        </a>
+                        <a href="{{ url_for('profile') }}" class="list-group-item list-group-item-action">
+                            <i class="bi bi-person me-2"></i> View Profile
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="card-footer bg-transparent border-top-0">
-          <a
-            href="{{ url_for('visualize', dataset_id=dataset.id) }}"
-            class="btn btn-sm btn-outline-primary w-100"
-          >
-            <i class="fas fa-chart-bar me-1"></i>View & Visualize
-          </a>
-        </div>
-      </div>
     </div>
-    {% endfor %}
-  </div>
-  {% endif %}
 </div>
 
 <script>
