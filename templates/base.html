@@ -8,7 +8,7 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
     />
-    <title>{% block title %}Epidemic Monitoring System{% endblock %}</title>
+    <title>{% block title %}Epidemic Data Analysis{% endblock %}</title>
 
     <!-- Bootstrap CSS -->
     <link
@@ -25,6 +25,10 @@
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+
     <!-- Custom CSS -->
     <link
       rel="stylesheet"
@@ -39,65 +43,412 @@
       rel="stylesheet"
     />
 
-    {% block head %}{% endblock %}
+    {% block extra_css %}{% endblock %}
 
     <style>
+      /* Body is initially hidden to prevent theme flashing */
+      body {
+        visibility: hidden;
+      }
+
+      /* Make the loading screen always visible */
       .loading-screen {
+        visibility: visible !important;
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: #ffffff;
+        background-color: var(--bg-color);
         z-index: 9999;
         display: flex;
         justify-content: center;
         align-items: center;
+        transition: opacity 0.5s ease-out;
+      }
+
+      .loading-content {
+        text-align: center;
+        max-width: 600px;
+        padding: 2rem;
+      }
+
+      .loading-title {
+        font-size: 3rem;
+        font-weight: 800;
+        margin-bottom: 2rem;
+        background: linear-gradient(
+          135deg,
+          var(--primary-color) 0%,
+          var(--accent-color, #6366f1) 50%,
+          var(--secondary-color) 100%
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: fadeInUp 0.8s ease forwards 0.2s;
+        text-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+      }
+
+      [data-theme="dark"] .loading-title {
+        background: linear-gradient(
+          135deg,
+          #60a5fa 0%,
+          #8b5cf6 50%,
+          #db2777 100%
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+      }
+
+      .loading-progress {
+        height: 4px;
+        background-color: var(--border-color);
+        border-radius: 2px;
+        margin: 2rem 0;
+        overflow: hidden;
+        opacity: 0;
+        transform: scaleX(0.8);
+        animation: fadeIn 0.8s ease forwards 0.6s;
+      }
+
+      .progress-bar {
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          var(--primary-color) 0%,
+          var(--accent-color, #6366f1) 50%,
+          var(--secondary-color) 100%
+        );
+        width: 0%;
+        border-radius: 2px;
+        animation: progressAnimation 3.5s cubic-bezier(0.1, 0.42, 0.85, 1)
+          forwards 0.8s;
+      }
+
+      .contributors-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1.5rem;
+        margin: 2rem 0;
+      }
+
+      .contributor {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: contributorAppear 0.5s ease forwards;
+      }
+
+      .contributor:nth-child(1) {
+        animation-delay: 1s;
+      }
+
+      .contributor:nth-child(2) {
+        animation-delay: 1.2s;
+      }
+
+      .contributor:nth-child(3) {
+        animation-delay: 1.4s;
+      }
+
+      .contributor:nth-child(4) {
+        animation-delay: 1.6s;
+      }
+
+      .contributor-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(
+          135deg,
+          var(--primary-color) 0%,
+          var(--accent-color, #6366f1) 60%
+        );
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        position: relative;
+        overflow: hidden;
+      }
+
+      [data-theme="dark"] .contributor-avatar {
+        background: linear-gradient(135deg, #60a5fa 0%, #8b5cf6 60%);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      }
+
+      .contributor-avatar::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.2),
+          transparent
+        );
+        animation: shimmer 2s infinite;
+      }
+
+      .contributor-name {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+      }
+
+      .loading-message {
+        margin-top: 2rem;
+        color: var(--text-tertiary);
+        font-size: 0.9rem;
+        opacity: 0;
+        animation: pulse 1.5s ease-in-out infinite, fadeIn 0.8s ease forwards 2s;
       }
 
       .main-content {
         display: none;
       }
+
+      .theme-toggle {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1030;
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        box-shadow: var(--shadow-lg);
+        cursor: pointer;
+        transition: transform 0.3s ease;
+      }
+
+      .theme-toggle:hover {
+        transform: scale(1.1);
+      }
+
+      .theme-toggle-icon {
+        font-size: 1.25rem;
+        transition: transform 0.5s ease;
+      }
+
+      .btn-action,
+      .btn-action i {
+        color: #fff !important;
+      }
+      .btn-action:hover,
+      .btn-action:focus {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        z-index: 1;
+      }
+      .btn-action i {
+        transition: transform 0.2s;
+      }
+      .btn-action:hover i,
+      .btn-action:focus i {
+        transform: scale(1.2);
+      }
+
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+          transform: scaleX(1);
+        }
+      }
+
+      @keyframes progressAnimation {
+        0% {
+          width: 0%;
+        }
+        50% {
+          width: 70%;
+        }
+        80% {
+          width: 90%;
+        }
+        100% {
+          width: 100%;
+        }
+      }
+
+      @keyframes contributorAppear {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes pulse {
+        0% {
+          opacity: 0.6;
+        }
+        50% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0.6;
+        }
+      }
+
+      @keyframes shimmer {
+        0% {
+          left: -100%;
+        }
+        100% {
+          left: 100%;
+        }
+      }
+
+      .contributor-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.5rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+      }
+
+      .contributor-card:hover {
+        background-color: var(--bg-secondary);
+        transform: translateY(-2px);
+      }
+
+      .contributor-info {
+        flex: 1;
+      }
+
+      .contributor-info h6 {
+        font-size: 0.9rem;
+        margin-bottom: 2px;
+      }
+
+      .contributor-info small {
+        font-size: 0.75rem;
+      }
+
+      footer {
+        background: var(--bg-primary);
+        border-top: 1px solid var(--border-color);
+      }
+
+      footer h3 {
+        color: var(--text-primary);
+        font-weight: 600;
+      }
+
+      footer h6 {
+        color: var(--text-primary);
+        font-size: 1rem;
+        font-weight: 500;
+      }
+
+      footer small {
+        font-size: 0.875rem;
+      }
+
+      footer .text-muted {
+        color: var(--text-secondary) !important;
+      }
+
+      @media (max-width: 768px) {
+        .contributor-avatar {
+          width: 40px;
+          height: 40px;
+          font-size: 1.25rem;
+        }
+
+        footer h6 {
+          font-size: 0.9rem;
+        }
+
+        footer small {
+          font-size: 0.8rem;
+        }
+      }
     </style>
   </head>
   <body>
-    <!-- Loading Screen - Only shown on homepage -->
-    {% if request.path == '/' %}
+    <!-- Loading screen -->
     <div class="loading-screen">
       <div class="loading-content">
         <h1 class="loading-title">Epidemic Monitoring System</h1>
         <div class="loading-progress">
           <div class="progress-bar"></div>
         </div>
-        <div class="contributors-container">
-          <div class="contributor" data-name="Swapnil Gaikwad">
+        <div
+          class="contributors-container d-flex justify-content-center flex-wrap gap-4"
+        >
+          <div class="contributor">
             <div class="contributor-avatar">SG</div>
             <span class="contributor-name">Swapnil Gaikwad</span>
           </div>
-          <div class="contributor" data-name="Terran Deng">
+          <div class="contributor">
             <div class="contributor-avatar">TD</div>
             <span class="contributor-name">Terran Deng</span>
           </div>
-          <div class="contributor" data-name="Nandhini Srinivasan">
+          <div class="contributor">
             <div class="contributor-avatar">NS</div>
-            <span class="contributor-name">Nadhini Srinivasa</span>
+            <span class="contributor-name">Nandhini Srinivasan</span>
           </div>
-          <div class="contributor" data-name="Harpreet Singh">
+          <div class="contributor">
             <div class="contributor-avatar">HS</div>
             <span class="contributor-name">Harpreet Singh</span>
           </div>
         </div>
         <p class="loading-message">Loading the system...</p>
-        <div style="margin-top: 20px; color: red">
-          <!-- for debugging -->
-          <!-- <p>
-            If you're stuck on this screen, click
-            <a href="#" id="force-continue">here</a> to continue.
-          </p> -->
-        </div>
       </div>
     </div>
-    {% endif %}
+
+    <!-- Loading overlay for AJAX operations -->
+    <div
+      id="loading-overlay"
+      class="position-fixed top-0 start-0 w-100 h-100 d-none align-items-center justify-content-center"
+      style="
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+        opacity: 0;
+        transition: opacity 0.3s;
+      "
+    >
+      <div class="spinner-border text-white" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
 
     <!-- Main Content -->
     <div
@@ -111,209 +462,357 @@
       endif
       %}
     >
-      <div class="d-flex flex-column min-vh-100">
-        <!-- Navigation Bar -->
-        <nav class="navbar navbar-expand-lg navbar-dark">
-          <div class="container">
-            <i class="bi bi-shield-check me-2"></i>
-            <a class="navbar-brand" href="{{ url_for('index') }}">
-              E M S
-            </a>
-
-            <button
-              class="navbar-toggler"
-              type="button"
-              data-bs-toggle="collapse"
-              data-bs-target="#navbarNav"
-              aria-controls="navbarNav"
-              aria-expanded="false"
-              aria-label="Toggle navigation"
-            >
-              <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <div class="collapse navbar-collapse" id="navbarNav">
-              <ul class="navbar-nav ms-auto">
-                <li class="nav-item">
-                  <a class="nav-link" href="{{ url_for('index') }}">Home</a>
-                </li>
-                {% if current_user.is_authenticated %}
-                <li class="nav-item">
-                  <a class="nav-link" href="{{ url_for('dashboard') }}"
-                    >Dashboard</a
-                  >
-                </li>
-                <li class="nav-item">
-                  <a class="nav-link" href="{{ url_for('upload') }}">Upload</a>
-                </li>
-                <li class="nav-item dropdown">
-                  <a
-                    class="nav-link dropdown-toggle d-flex align-items-center"
-                    href="#"
-                    id="userDropdown"
-                    role="button"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false"
-                  >
-                    <img src="{{ url_for('static', filename='uploads/' + (current_user.profile_picture or 'default.png')) }}"
-                         alt="Profile" class="rounded-circle me-2" width="32" height="32">
-                    {{ current_user.username }}
-                  </a>
-                  <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                    <li><a class="dropdown-item" href="{{ url_for('profile') }}">Profile</a></li>
-                    <li><a class="dropdown-item" href="#">Settings</a></li>
-                    <li><hr class="dropdown-divider" /></li>
-                    <li><a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a></li>
-                  </ul>
-                </li>
-                
-                    </li>
-                  </ul>
-                </li>
-                {% else %}
-                <li class="nav-item">
-                  <a class="nav-link" href="{{ url_for('login') }}">Login</a>
-                </li>
-                <li class="nav-item">
-                  <a class="nav-link" href="{{ url_for('signup') }}">Sign Up</a>
-                </li>
-                </li>
-                {% endif %}
-              </ul>
-            </div>
-          </div>
-        </nav>
-
-        <!-- Flash Messages -->
-        <div class="container mt-3">
-          {% with messages = get_flashed_messages(with_categories=true) %} {% if
-          messages %} {% for category, message in messages %}
-          <div
-            class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show"
-            role="alert"
+      <!-- Modern Navbar -->
+      <nav class="navbar navbar-expand-lg navbar-light bg-light sticky-top">
+        <div class="container">
+          <a
+            class="navbar-brand d-flex align-items-center"
+            href="{{ url_for('index') }}"
           >
-            {{ message }}
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="alert"
-              aria-label="Close"
-            ></button>
-          </div>
-          {% endfor %} {% endif %} {% endwith %}
-        </div>
-
-        <!-- Main Content -->
-        <main class="flex-grow-1 py-4">{% block content %}{% endblock %}</main>
-
-        <!-- Footer -->
-        <footer class="bg-dark text-white py-4 mt-auto">
-          <div class="container text-center">
-            <p class="mb-2">&copy; Contributors:</p>
-            <ul class="list-unstyled">
-              <li class="mb-1">
-                <a href="https://github.com/SwapyG" class="text-light">
-                  Swapnil Gaikwad <i class="fab fa-github"></i>
+            <i class="bi bi-virus me-2"></i>
+            EMS
+          </a>
+          <button
+            class="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#navbarNav"
+          >
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+              {% if current_user.is_authenticated %}
+              <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('dashboard') }}">
+                  <i class="bi bi-speedometer2 me-1"></i> Dashboard
                 </a>
               </li>
-              <li class="mb-1">
-                <a href="https://github.com/TerranConfederacy" class="text-light">
-                  Terran Deng <i class="fab fa-github"></i>
+              <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('upload') }}">
+                  <i class="bi bi-cloud-upload me-1"></i> Upload
                 </a>
               </li>
-              <li class="mb-1">
-                <a href="" class="text-light">
-                  Nandhini Srinivasan <i class="fab fa-github"></i>
+              <li class="nav-item dropdown">
+                <a
+                  class="nav-link dropdown-toggle"
+                  href="#"
+                  role="button"
+                  data-bs-toggle="dropdown"
+                >
+                  <i class="bi bi-person-circle me-1"></i> {{
+                  current_user.username }}
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li>
+                    <a class="dropdown-item" href="{{ url_for('profile') }}">
+                      <i class="bi bi-person me-2"></i> Profile
+                    </a>
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{{ url_for('settings') }}">
+                      <i class="bi bi-gear me-2"></i> Settings
+                    </a>
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{{ url_for('help') }}">
+                      <i class="bi bi-question-circle me-2"></i> Help & Support
+                    </a>
+                  </li>
+                  <li><hr class="dropdown-divider" /></li>
+                  <li>
+                    <a
+                      class="dropdown-item text-danger"
+                      href="{{ url_for('logout') }}"
+                    >
+                      <i class="bi bi-box-arrow-right me-2"></i> Logout
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              {% else %}
+              <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('login') }}">
+                  <i class="bi bi-box-arrow-in-right me-1"></i> Login
                 </a>
               </li>
-              <li class="mb-1">
-                <a href="" class="text-light">
-                  Harpreet Singh <i class="fab fa-github"></i>
+              <li class="nav-item">
+                <a class="nav-link" href="{{ url_for('signup') }}">
+                  <i class="bi bi-person-plus me-1"></i> Sign Up
                 </a>
+              </li>
+              {% endif %}
+              <li class="nav-item">
+                <button
+                  id="theme-toggle"
+                  class="btn btn-sm btn-link nav-link px-2 py-1"
+                  aria-label="Toggle theme"
+                >
+                  <i class="fas fa-moon"></i>
+                </button>
               </li>
             </ul>
-            <p class="text-muted small mt-2">
-              Version 0.1.0 - Development Build
+          </div>
+        </div>
+      </nav>
+
+      <!-- Flash Messages with Animation -->
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if
+      messages %}
+      <div class="container mt-3">
+        {% for category, message in messages %}
+        <div
+          class="alert alert-{{ category }} alert-dismissible fade show slide-in"
+          role="alert"
+        >
+          {{ message }}
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="alert"
+          ></button>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %} {% endwith %}
+
+      <!-- Main Content -->
+      <main class="container py-4">{% block content %}{% endblock %}</main>
+
+      <!-- Footer -->
+      <footer class="py-4 mt-auto">
+        <div class="container">
+          <div class="row">
+            <div class="col-md-5">
+              <h3 class="h5 mb-4">About the Project</h3>
+              <p class="text-muted mb-0">
+                The Epidemic Monitoring System is a collaborative project
+                developed as part of the Agile Web Development course at The
+                University of Western Australia.
+              </p>
+            </div>
+            <div class="col-md-7">
+              <h3 class="h5 mb-4">Contributors</h3>
+              <div class="row g-4">
+                <div class="col-md-6">
+                  <div class="d-flex align-items-center gap-3">
+                    <a
+                      href="https://github.com/swapnilgaikwad1507"
+                      class="contributor-avatar"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <i class="bi bi-github"></i>
+                    </a>
+                    <div>
+                      <h6 class="mb-1">Swapnil Gaikwad</h6>
+                      <small class="text-muted">Full Stack Developer</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="d-flex align-items-center gap-3">
+                    <a
+                      href="https://github.com/terranDeng"
+                      class="contributor-avatar"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <i class="bi bi-github"></i>
+                    </a>
+                    <div>
+                      <h6 class="mb-1">Terran Deng</h6>
+                      <small class="text-muted">Full Stack Developer</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="d-flex align-items-center gap-3">
+                    <a
+                      href="https://github.com/Nandhini-Srinivasan"
+                      class="contributor-avatar"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <i class="bi bi-github"></i>
+                    </a>
+                    <div>
+                      <h6 class="mb-1">Nandhini Srinivasan</h6>
+                      <small class="text-muted">Full Stack Developer</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="d-flex align-items-center gap-3">
+                    <a
+                      href="https://github.com/harpreetsingh100"
+                      class="contributor-avatar"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <i class="bi bi-github"></i>
+                    </a>
+                    <div>
+                      <h6 class="mb-1">Harpreet Singh</h6>
+                      <small class="text-muted">Full Stack Developer</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <hr class="my-4 border-secondary" />
+          <div class="text-center">
+            <p class="mb-0 text-muted">
+              © 2024 Epidemic Monitor. All rights reserved.
             </p>
           </div>
-        </footer>
-      </div>
+        </div>
+      </footer>
     </div>
 
-    <!-- Loading Screen Script -->
-    <script src="{{ url_for('static', filename='js/loading.js') }}"></script>
-
-
-    <!-- Theme Toggle Script -->
-    <script src="{{ url_for('static', filename='js/theme-toggle.js') }}"></script>
-
-    <!-- Bootstrap JS Bundle with Popper -->
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- Inject Animation Keyframes -->
+    <!-- Loading Screen Script -->
     <script>
-      document.head.insertAdjacentHTML(
-        "beforeend",
-        `
-        <style>
-          @keyframes fadeInDown {
-            from {
-              opacity: 0;
-              transform: translateY(-20px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
+      document.addEventListener("DOMContentLoaded", function () {
+        const loadingScreen = document.querySelector(".loading-screen");
+        const mainContent = document.querySelector(".main-content");
 
-          @keyframes fadeInLeft {
-            from {
-              opacity: 0;
-              transform: translateX(-20px);
-            }
-            to {
-              opacity: 1;
-              transform: translateX(0);
-            }
-          }
+        // Only show full loading animation on homepage
+        if (
+          window.location.pathname === "/" ||
+          window.location.pathname === ""
+        ) {
+          // On homepage, show the loading screen
+          loadingScreen.style.display = "flex";
+          mainContent.style.display = "none";
 
-          @keyframes fadeInRight {
-            from {
-              opacity: 0;
-              transform: translateX(20px);
-            }
-            to {
-              opacity: 1;
-              transform: translateX(0);
-            }
-          }
-          
-          @keyframes fadeInUp {
-            from {
-              opacity: 0;
-              transform: translateY(20px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-          
-          @keyframes fadeIn {
-            from {
-              opacity: 0;
-            }
-            to {
-              opacity: 1;
-            }
-          }
-        </style>
-        `
-      );
+          // Hide loading screen after 3 seconds with smooth transition
+          setTimeout(function () {
+            // Start fading out loading screen
+            loadingScreen.style.opacity = "0";
+
+            // Add fade-in class to main content for smooth appearance
+            setTimeout(function () {
+              // Set up main content with initial styles for animation
+              mainContent.style.display = "block";
+              mainContent.style.opacity = "0";
+              mainContent.style.transform = "translateY(20px)";
+              mainContent.style.transition =
+                "opacity 0.8s ease-out, transform 0.8s ease-out";
+
+              // Force browser to acknowledge the style changes before animating
+              setTimeout(function () {
+                // Make body visible and animate main content
+                document.body.style.visibility = "visible";
+                mainContent.style.opacity = "1";
+                mainContent.style.transform = "translateY(0)";
+
+                // Hide loading screen completely after transition
+                setTimeout(function () {
+                  loadingScreen.style.display = "none";
+                }, 800);
+              }, 50);
+            }, 300);
+          }, 3000);
+        } else {
+          // On other pages, immediately hide loading and show content
+          loadingScreen.style.display = "none";
+          mainContent.style.display = "block";
+          // Make body visible immediately
+          document.body.style.visibility = "visible";
+        }
+      });
     </script>
 
-    <!-- Custom Scripts -->
-    {% block scripts %}{% endblock %}
+    <!-- Theme Toggle Script -->
+    <script>
+      // Theme settings
+      document.addEventListener("DOMContentLoaded", function () {
+        const toggleButton = document.getElementById("theme-toggle");
+        const icon = toggleButton.querySelector("i");
+        let currentTheme = localStorage.getItem("theme") || "light";
+
+        // Immediately apply the saved theme to prevent flashing
+        document.documentElement.setAttribute("data-theme", currentTheme);
+        updateIcon(currentTheme);
+
+        // Add transition class to body
+        document.body.classList.add("theme-transition");
+
+        // Note: We don't set visibility here anymore
+        // This is now handled by the loading screen script
+
+        toggleButton.addEventListener("click", function () {
+          if (currentTheme === "light") {
+            currentTheme = "dark";
+          } else {
+            currentTheme = "light";
+          }
+
+          // Animate theme change
+          document.body.classList.add("theme-transition");
+          document.documentElement.setAttribute("data-theme", currentTheme);
+          localStorage.setItem("theme", currentTheme);
+          updateIcon(currentTheme);
+        });
+
+        function updateIcon(theme) {
+          if (theme === "dark") {
+            icon.className = "fas fa-sun"; // Show sun in dark mode
+          } else {
+            icon.className = "fas fa-moon"; // Show moon in light mode
+          }
+        }
+
+        // Initialize loading overlay for forms
+        const forms = document.querySelectorAll("form:not(.no-loading)");
+        forms.forEach((form) => {
+          form.addEventListener("submit", function () {
+            showLoadingOverlay();
+          });
+        });
+      });
+
+      function showLoadingOverlay() {
+        const overlay = document.getElementById("loading-overlay");
+        overlay.style.display = "flex";
+        setTimeout(() => {
+          overlay.style.opacity = "1";
+        }, 10);
+      }
+
+      function hideLoadingOverlay() {
+        const overlay = document.getElementById("loading-overlay");
+        overlay.style.opacity = "0";
+        setTimeout(() => {
+          overlay.style.display = "none";
+        }, 300);
+      }
+    </script>
+
+    <!-- Loading state management -->
+    <script>
+      function showLoading() {
+        document.getElementById("loading-overlay").style.display = "flex";
+      }
+
+      function hideLoading() {
+        document.getElementById("loading-overlay").style.display = "none";
+      }
+
+      // Add loading state to forms
+      document.addEventListener("DOMContentLoaded", function () {
+        const forms = document.querySelectorAll("form");
+        forms.forEach((form) => {
+          form.addEventListener("submit", function () {
+            showLoading();
+          });
+        });
+      });
+    </script>
+    {% block extra_js %}{% endblock %}
   </body>
 </html>

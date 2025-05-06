@@ -146,71 +146,6 @@ main.flex-grow-1 {
 }
 
 /* ===================== */
-/* Theme Toggle Styling */
-/* ===================== */
-.theme-toggle {
-  position: fixed;
-  bottom: 20px; 
-  right: 20px;
-  z-index: var(--z-fixed);
-  background-color: var(--primary-color);
-  color: var(--text-light);
-  border-radius: var(--radius-full);
-  width: 45px;
-  height: 45px;
-  box-shadow: var(--shadow-lg);
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: var(--transition-base);
-}
-
-.theme-toggle:hover {
-  background-color: var(--primary-light);
-  box-shadow: var(--shadow-xl);
-}
-
-[data-theme="dark"] .theme-toggle:hover {
-  background-color: #444444; /* Darker shade for dark mode */
-}
-
-@media (max-width: 768px) {
-  .theme-toggle {
-    position: absolute;
-    top: 12px;
-    right: 60px;
-  }
-}
-
-.theme-toggle-icon {
-  font-size: 1.25rem;
-  color: var(--text-light);
-  transition: var(--transition-base);
-}
-
-.theme-toggle-icon.bi-sun {
-  animation: rotate-in 0.5s;
-}
-
-.theme-toggle-icon.bi-moon {
-  animation: rotate-in 0.5s;
-}
-
-/* animation */
-@keyframes rotate-in {
-  from {
-    transform: rotate(-180deg) scale(0.5);
-    opacity: 0;
-  }
-  to {
-    transform: rotate(0) scale(1);
-    opacity: 1;
-  }
-}
-
-/* ===================== */
 /* Global Typography & Base */
 /* ===================== */
 h1,
@@ -1029,10 +964,9 @@ a:hover {
 }
 
 .forgot-link:hover {
-  color:blue;
+  color: blue;
   text-decoration-thickness: 2px;
 }
-
 
 /* Account status */
 .account-status {
@@ -1843,7 +1777,6 @@ footer ul.list-unstyled li a:hover i {
   border: 1px solid #ccc;
 }
 
-
 /* ===================== */
 /* Flash Message Styling */
 /* ===================== */
@@ -2186,4 +2119,241 @@ html:not([data-theme="dark"]) {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Theme colors for various components */
+[data-theme="dark"] .card {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .card-header {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .list-group-item {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .list-group-item.active {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+}
+
+[data-theme="dark"] .list-group-item-action:hover {
+  background-color: var(--bg-tertiary);
+}
+
+[data-theme="dark"] .modal-content {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .modal-header,
+[data-theme="dark"] .modal-footer {
+  border-color: var(--border-color);
+}
+
+/* Form controls in dark mode */
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .form-select:focus {
+  background-color: var(--bg-tertiary);
+  border-color: var(--primary-color);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .form-control[readonly],
+[data-theme="dark"] .form-control:disabled,
+[data-theme="dark"] .form-select:disabled {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .form-check-input {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-color);
+}
+
+/* Table styles for dark mode */
+[data-theme="dark"] .table {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .table td,
+[data-theme="dark"] .table th {
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .table-hover tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+/* Accordion styles for dark mode */
+[data-theme="dark"] .accordion-item {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .accordion-button {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .accordion-button:not(.collapsed) {
+  background-color: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .accordion-button::after {
+  filter: invert(1);
+}
+
+/* Alert styles for dark mode */
+[data-theme="dark"] .alert-info {
+  background-color: rgba(23, 162, 184, 0.2);
+  border-color: rgba(23, 162, 184, 0.3);
+  color: #9fcdff;
+}
+
+[data-theme="dark"] .alert-warning {
+  background-color: rgba(255, 193, 7, 0.2);
+  border-color: rgba(255, 193, 7, 0.3);
+  color: #ffe187;
+}
+
+[data-theme="dark"] .alert-danger {
+  background-color: rgba(220, 53, 69, 0.2);
+  border-color: rgba(220, 53, 69, 0.3);
+  color: #f6cdd1;
+}
+
+/* Settings page specific styles */
+[data-theme="dark"] .contributor-avatar {
+  background-color: var(--primary-color);
+}
+
+[data-theme="dark"] .danger-zone {
+  background-color: rgba(220, 53, 69, 0.1);
+  border-color: rgba(220, 53, 69, 0.2);
+}
+
+/* Help page specific styles */
+[data-theme="dark"] .card-header.bg-light {
+  background-color: var(--bg-secondary) !important;
+}
+
+[data-theme="dark"] .bi-lightbulb {
+  color: #ffe187;
+}
+
+/* Tooltip styles for dark mode */
+[data-theme="dark"] .tooltip .tooltip-inner {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .tooltip .tooltip-arrow::before {
+  border-top-color: var(--bg-tertiary);
+}
+
+/* Badge styles for dark mode */
+[data-theme="dark"] .badge.bg-secondary {
+  background-color: #6c757d !important;
+}
+
+/* Overlay for dark mode */
+[data-theme="dark"] #loading-overlay {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+/* Theme transition effect */
+body {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.theme-transition * {
+  transition: background-color 0.3s ease, color 0.3s ease,
+    border-color 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+/* Animation keyframes */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Element animations */
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.slide-in-right {
+  animation: slideInRight 0.5s ease-out;
+}
+
+/* Staggered animations for cards */
+.card-animate {
+  opacity: 0;
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+/* Theme transition effect for smoother theme changes */
+.theme-transition,
+.theme-transition * {
+  transition: background-color 0.3s ease, color 0.3s ease,
+    border-color 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+/* Form button in button groups */
+.btn-group form {
+  flex: 1;
+  margin: 0;
+  display: flex;
+}
+
+.btn-group form .btn {
+  flex: 1;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 }

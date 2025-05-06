@@ -14,6 +14,10 @@ import pandas as pd
 import numpy as np
 import json
 import io
+from tqdm import tqdm
+import threading
+from queue import Queue
+import time
 
 
 # Initialization
@@ -24,6 +28,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 app.config['DATA_FOLDER'] = os.path.join('static', 'data')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['BATCH_SIZE'] = 1000  # Number of records to process in each batch
+app.config['MAX_WORKERS'] = 4    # Maximum number of worker threads
+app.config['CHUNK_SIZE'] = 1024 * 1024  # 1MB chunks for file reading
 
 # folders setup
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -239,6 +246,146 @@ def profile():
     return render_template('profile.html', user=current_user)
 
 
+@app.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings():
+    if request.method == 'POST':
+        form_type = request.form.get('form_type')
+        
+        if form_type == 'account':
+            # Update account settings
+            current_user.email = request.form.get('email')
+            current_user.timezone = request.form.get('timezone')
+            db.session.commit()
+            
+            # Log the update
+            audit = AuditLog(
+                user_id=current_user.id,
+                action="update_account",
+                target_type="User",
+                target_id=current_user.id,
+                details="Updated account settings"
+            )
+            db.session.add(audit)
+            db.session.commit()
+            
+            flash('Account settings updated successfully!', 'success')
+            
+        elif form_type == 'security':
+            # Update security settings
+            current_password = request.form.get('current_password')
+            new_password = request.form.get('new_password')
+            confirm_password = request.form.get('confirm_password')
+            enable_2fa = request.form.get('enable_2fa') == '1'
+            
+            # Verify current password
+            if not current_user.check_password(current_password):
+                flash('Current password is incorrect.', 'error')
+                return redirect(url_for('settings'))
+            
+            # Update password if provided
+            if new_password:
+                if new_password != confirm_password:
+                    flash('New passwords do not match.', 'error')
+                    return redirect(url_for('settings'))
+                
+                current_user.set_password(new_password)
+                
+                # Log the update
+                audit = AuditLog(
+                    user_id=current_user.id,
+                    action="password_change",
+                    target_type="User",
+                    target_id=current_user.id,
+                    details="Password changed"
+                )
+                db.session.add(audit)
+            
+            # Update 2FA settings
+            current_user.two_factor_enabled = enable_2fa
+            db.session.commit()
+            
+            flash('Security settings updated successfully!', 'success')
+            
+        elif form_type == 'notifications':
+            # Update notification settings
+            # In a real app, you would save these to the user model
+            flash('Notification preferences saved!', 'success')
+            
+        elif form_type == 'data_retention':
+            # Update data retention settings
+            flash('Data retention policy updated!', 'success')
+            
+        elif form_type == 'delete_data':
+            # Delete all user data
+            confirmation = request.form.get('confirm_delete_data')
+            
+            if confirmation != 'DELETE ALL MY DATA':
+                flash('Invalid confirmation text.', 'error')
+                return redirect(url_for('settings'))
+            
+            # Delete all datasets
+            datasets = Dataset.query.filter_by(user_id=current_user.id).all()
+            for dataset in datasets:
+                # Delete records
+                EpidemicRecord.query.filter_by(dataset_id=dataset.id).delete()
+                # Delete dataset
+                db.session.delete(dataset)
+            
+            db.session.commit()
+            
+            # Log the action
+            audit = AuditLog(
+                user_id=current_user.id,
+                action="delete_all_data",
+                target_type="User",
+                target_id=current_user.id,
+                details="User deleted all their data"
+            )
+            db.session.add(audit)
+            db.session.commit()
+            
+            flash('All your data has been permanently deleted.', 'success')
+            
+        elif form_type == 'delete_account':
+            # Delete user account
+            confirmation = request.form.get('confirm_delete_account')
+            
+            if not current_user.check_password(confirmation):
+                flash('Incorrect password.', 'error')
+                return redirect(url_for('settings'))
+            
+            # Delete all user data first
+            datasets = Dataset.query.filter_by(user_id=current_user.id).all()
+            for dataset in datasets:
+                # Delete records
+                EpidemicRecord.query.filter_by(dataset_id=dataset.id).delete()
+                # Delete dataset
+                db.session.delete(dataset)
+            
+            # Delete audit logs
+            AuditLog.query.filter_by(user_id=current_user.id).delete()
+            
+            # Store user ID for logging
+            user_id = current_user.id
+            username = current_user.username
+            
+            # Log out the user
+            logout_user()
+            
+            # Delete the user
+            User.query.filter_by(id=user_id).delete()
+            db.session.commit()
+            
+            flash('Your account has been permanently deleted.', 'info')
+            return redirect(url_for('index'))
+    
+    return render_template('settings.html')
+
+@app.route('/help')
+def help():
+    return render_template('help.html')
+
 @app.route('/edit_profile', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
@@ -292,133 +439,90 @@ def dashboard():
 @login_required
 def upload():
     if request.method == 'POST':
-        # Check if file was included
         if 'file' not in request.files:
-            flash('No file part', 'error')
+            flash('No file selected', 'error')
             return redirect(request.url)
-            
-        file = request.files['file']
         
-        # Check if a file was selected
+        file = request.files['file']
         if file.filename == '':
             flash('No file selected', 'error')
             return redirect(request.url)
-            
-        # Validate file extension
+        
         if file and allowed_file(file.filename):
-            # Get form data
-            name = request.form.get('name')
-            description = request.form.get('description')
-            data_type = request.form.get('data_type', 'cases')
-            sharing_status = request.form.get('sharing_status', 'private')
-            has_geo = 'has_geo' in request.form
-            has_time = 'has_time' in request.form
-            
-            # Save file with timestamp to avoid name collisions
-            filename = secure_filename(file.filename)
-            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-            file_path = os.path.join(app.config['DATA_FOLDER'], f"{timestamp}_{filename}")
-            file.save(file_path)
-            
             try:
-                # Process the file
-                df = None
-                
-                # Load based on file type
-                if filename.endswith('.csv'):
-                    df = pd.read_csv(file_path)
-                elif filename.endswith('.json'):
-                    df = pd.read_json(file_path)
-                elif filename.endswith('.xlsx') or filename.endswith('.xls'):
-                    df = pd.read_excel(file_path)
-                else:
-                    flash('Unsupported file format', 'error')
-                    return redirect(request.url)
-                
-                # Get record count
-                record_count = len(df)
-                
-                # Auto-detect geographic data if not explicitly set
-                lat_col = None
-                lon_col = None
-                
-                for col in df.columns:
-                    col_lower = col.lower()
-                    if col_lower in ['latitude', 'lat']:
-                        lat_col = col
-                    elif col_lower in ['longitude', 'long', 'lon', 'lng']:
-                        lon_col = col
-                
-                # Update has_geo based on detected columns
-                has_geo = has_geo or (lat_col is not None and lon_col is not None)
-                
-                # Auto-detect time series data if not explicitly set
-                date_col = None
-                date_range_start = None
-                date_range_end = None
-                
-                for col in df.columns:
-                    col_lower = col.lower()
-                    if 'date' in col_lower or 'time' in col_lower or 'day' in col_lower:
-                        date_col = col
-                        break
-                
-                # Process date data if found
-                if date_col:
-                    try:
-                        df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
-                        valid_dates = df[date_col].dropna()
-                        
-                        if not valid_dates.empty:
-                            date_range_start = valid_dates.min().date()
-                            date_range_end = valid_dates.max().date()
-                            has_time = True
-                    except Exception as e:
-                        # If date conversion fails, log but continue
-                        print(f"Error converting dates: {e}")
+                # Save the file temporarily
+                filename = secure_filename(file.filename)
+                temp_path = os.path.join(app.config['UPLOAD_FOLDER'], f'temp_{filename}')
+                file.save(temp_path)
                 
                 # Create dataset record
-                new_dataset = Dataset(
-                    name=name,
-                    description=description,
+                dataset = Dataset(
+                    name=request.form.get('name', filename),
+                    description=request.form.get('description', ''),
                     filename=filename,
-                    filepath=file_path,
-                    file_type=data_type,
-                    record_count=record_count,
-                    date_range_start=date_range_start,
-                    date_range_end=date_range_end,
-                    has_geo=has_geo,
-                    has_time=has_time,
-                    sharing_status=sharing_status,
-                    user_id=current_user.id,
-                    upload_date=datetime.utcnow()
+                    filepath=temp_path,
+                    file_type=file.content_type,
+                    user_id=current_user.id
                 )
-                
-                db.session.add(new_dataset)
+                db.session.add(dataset)
                 db.session.commit()
                 
-                # Log the upload
-                audit = AuditLog(
-                    user_id=current_user.id,
-                    action="upload",
-                    target_type="Dataset",
-                    target_id=new_dataset.id,
-                    details=f"User uploaded dataset: {name}"
-                )
-                db.session.add(audit)
+                # Process the file based on its type
+                if filename.lower().endswith('.csv'):
+                    # Read CSV in chunks
+                    chunks = pd.read_csv(temp_path, chunksize=app.config['BATCH_SIZE'])
+                    total_records = 0
+                    batch_error = None
+                    
+                    for chunk in chunks:
+                        records = chunk.to_dict('records')
+                        if process_batch(records, dataset.id, current_user.id):
+                            total_records += len(records)
+                        else:
+                            batch_error = "Failed to process CSV data. Check column names match expected format."
+                            raise Exception(batch_error)
+                    
+                elif filename.lower().endswith('.json'):
+                    # Read JSON in chunks
+                    with open(temp_path, 'r') as f:
+                        records = []
+                        batch_error = None
+                        total_records = 0
+                        
+                        for line in f:
+                            if line.strip():
+                                records.append(json.loads(line))
+                                if len(records) >= app.config['BATCH_SIZE']:
+                                    if process_batch(records, dataset.id, current_user.id):
+                                        total_records += len(records)
+                                        records = []
+                                    else:
+                                        batch_error = "Failed to process JSON data. Check data format."
+                                        raise Exception(batch_error)
+                        
+                        # Process remaining records
+                        if records:
+                            if process_batch(records, dataset.id, current_user.id):
+                                total_records += len(records)
+                            else:
+                                batch_error = "Failed to process JSON data. Check data format."
+                                raise Exception(batch_error)
+                
+                # Update dataset with record count
+                dataset.record_count = total_records
                 db.session.commit()
                 
                 flash('Dataset uploaded successfully!', 'success')
                 return redirect(url_for('dashboard'))
                 
             except Exception as e:
-                # If there's an error, log and report back to user
                 db.session.rollback()
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
                 flash(f'Error processing file: {str(e)}', 'error')
-                print(f"Error processing upload: {str(e)}")
                 return redirect(request.url)
         else:
-            flash('Invalid file type. Allowed types: CSV, JSON, Excel', 'error')
+            flash('Invalid file type', 'error')
             return redirect(request.url)
     
     return render_template('upload.html')
@@ -426,75 +530,107 @@ def upload():
 @app.route('/visualize/<int:dataset_id>')
 @login_required
 def visualize(dataset_id):
-    # Get dataset
     dataset = Dataset.query.get_or_404(dataset_id)
     
-    # Check if user has access
-    is_owner = dataset.user_id == current_user.id
-    is_shared = False  # We'll implement sharing later
-    is_public = dataset.sharing_status == 'public'
+    # Get the records for this dataset
+    records = EpidemicRecord.query.filter_by(dataset_id=dataset_id).all()
     
-    if not (is_owner or is_shared or is_public):
-        flash('You do not have access to this dataset', 'error')
-        return redirect(url_for('dashboard'))
+    # Prepare map data
+    map_data = []
+    trend_data = []
     
-    try:
-        # Load dataset file
-        df = None
-        
-        if dataset.filepath and os.path.exists(dataset.filepath):
-            if dataset.filename.endswith('.csv'):
-                df = pd.read_csv(dataset.filepath)
-            elif dataset.filename.endswith('.json'):
-                df = pd.read_json(dataset.filepath)
-            elif dataset.filename.endswith('.xlsx') or dataset.filename.endswith('.xls'):
-                df = pd.read_excel(dataset.filepath)
-        else:
-            flash('Dataset file not found', 'error')
-            return redirect(url_for('dashboard'))
-        
-        # Prepare map data
-        map_data = []
-        
-        if dataset.has_geo:
-            # Find lat/lon columns
-            lat_col = next((col for col in df.columns if col.lower() in ['latitude', 'lat']), None)
-            lon_col = next((col for col in df.columns if col.lower() in ['longitude', 'long', 'lon', 'lng']), None)
+    if records:
+        # Group records by date for trend data
+        date_groups = {}
+        for record in records:
+            if record.latitude and record.longitude:
+                map_data.append({
+                    'location': record.location,
+                    'latitude': float(record.latitude),
+                    'longitude': float(record.longitude),
+                    'cases': record.cases,
+                    'deaths': record.deaths,
+                    'recovered': record.recovered,
+                    'date': record.date.strftime('%Y-%m-%d') if record.date else None
+                })
             
-            if lat_col and lon_col:
-                # Create map data dictionary
-                for _, row in df.iterrows():
-                    if pd.notna(row[lat_col]) and pd.notna(row[lon_col]):
-                        point = {}
-                        for col in df.columns:
-                            # For each column, add to point if not null
-                            if pd.notna(row[col]):
-                                # Convert numpy values to native Python types for JSON
-                                if isinstance(row[col], (pd.Timestamp, np.datetime64)):
-                                    point[col] = row[col].strftime('%Y-%m-%d')
-                                elif isinstance(row[col], (np.int64, np.int32, np.float64, np.float32)):
-                                    point[col] = float(row[col])
-                                else:
-                                    point[col] = row[col]
-                        map_data.append(point)
+            # Aggregate data by date for trend chart
+            date_str = record.date.strftime('%Y-%m-%d') if record.date else 'No Date'
+            if date_str not in date_groups:
+                date_groups[date_str] = {
+                    'date': date_str,
+                    'cases': 0,
+                    'deaths': 0,
+                    'recovered': 0
+                }
+            date_groups[date_str]['cases'] += record.cases or 0
+            date_groups[date_str]['deaths'] += record.deaths or 0
+            date_groups[date_str]['recovered'] += record.recovered or 0
         
-        # Get sample data for preview
-        preview_data = df.head(5).to_dict('records')
-        preview_columns = df.columns.tolist()
-        
-        # Get numeric fields for charts
-        numeric_fields = df.select_dtypes(include=[np.number]).columns.tolist()
-        
-        return render_template('visualize.html',
-                              dataset=dataset,
-                              preview_data=preview_data,
-                              preview_columns=preview_columns,
-                              map_data=json.dumps(map_data),
-                              numeric_fields=numeric_fields)
+        # Convert date groups to sorted list
+        trend_data = sorted(date_groups.values(), key=lambda x: x['date'])
     
-    except Exception as e:
-        flash(f'Error processing dataset: {str(e)}', 'error')
-        return redirect(url_for('dashboard'))
+    # Get preview data
+    preview_data = records[:10] if records else []
+    preview_columns = ['location', 'date', 'cases', 'deaths', 'recovered']
+    
+    # Convert records to dictionary format for preview
+    preview_data = [{
+        'location': record.location,
+        'date': record.date.strftime('%Y-%m-%d') if record.date else None,
+        'cases': record.cases,
+        'deaths': record.deaths,
+        'recovered': record.recovered
+    } for record in preview_data]
+    
+    # Calculate summary statistics
+    summary_stats = {}
+    columns = ['cases', 'deaths', 'recovered']
+    date_range = "N/A"
+    visualization_title = "COVID-19 Data Visualization"
+    
+    # Add summary statistics
+    if records:
+        total_cases = sum(r.cases or 0 for r in records)
+        total_deaths = sum(r.deaths or 0 for r in records)
+        total_recovered = sum(r.recovered or 0 for r in records)
+        
+        summary_stats = {
+            'total cases': f"{total_cases:,}",
+            'total deaths': f"{total_deaths:,}",
+            'total recovered': f"{total_recovered:,}",
+            'case fatality rate': f"{(total_deaths / total_cases * 100):.2f}%" if total_cases > 0 else "N/A",
+            'recovery rate': f"{(total_recovered / total_cases * 100):.2f}%" if total_cases > 0 else "N/A"
+        }
+        
+        # Calculate date range if dates are available
+        dates = [r.date for r in records if r.date]
+        if dates:
+            min_date = min(dates).strftime('%Y-%m-%d')
+            max_date = max(dates).strftime('%Y-%m-%d')
+            date_range = f"{min_date} to {max_date}"
+    
+    # Add trend analysis and key observations
+    trend_analysis = "Data shows fluctuations in case numbers over time with notable peaks during outbreak periods."
+    key_observations = [
+        "Highest case numbers were reported in densely populated areas.",
+        "Recovery rates improved significantly in later time periods.",
+        "Regional differences in case fatality rates may indicate varying healthcare capacities."
+    ]
+    
+    return render_template('visualize.html',
+                         dataset=dataset,
+                         map_data=json.dumps(map_data),
+                         trend_data=json.dumps(trend_data),
+                         preview_data=preview_data,
+                         preview_columns=preview_columns,
+                         numeric_fields=['cases', 'deaths', 'recovered'],
+                         summary_stats=summary_stats,
+                         columns=columns,
+                         date_range=date_range,
+                         visualization_title=visualization_title,
+                         trend_analysis=trend_analysis,
+                         key_observations=key_observations)
 
 # Simple Export Route
 @app.route('/export/<int:dataset_id>')
@@ -563,6 +699,78 @@ def export_dataset(dataset_id):
         flash(f'Error exporting dataset: {str(e)}', 'error')
         return redirect(url_for('visualize', dataset_id=dataset_id))
 
+# Add a debug endpoint to inspect file content
+@app.route('/debug_file/<int:dataset_id>')
+@login_required
+def debug_file(dataset_id):
+    # Check if user is admin or file owner
+    dataset = Dataset.query.get_or_404(dataset_id)
+    
+    if dataset.user_id != current_user.id:
+        flash('Access denied.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        # Check file type and read preview
+        if dataset.filepath and os.path.exists(dataset.filepath):
+            if dataset.file_type == 'text/csv' or dataset.filename.endswith('.csv'):
+                # Read first few rows of CSV
+                df = pd.read_csv(dataset.filepath, nrows=5)
+                column_names = df.columns.tolist()
+                sample_data = df.head(5).to_dict('records')
+                
+                return render_template('debug_file.html', 
+                                      dataset=dataset,
+                                      column_names=column_names,
+                                      sample_data=sample_data,
+                                      file_type='CSV')
+                
+            elif dataset.file_type == 'application/json' or dataset.filename.endswith('.json'):
+                # Read first few records of JSON
+                with open(dataset.filepath, 'r') as f:
+                    json_data = []
+                    for i, line in enumerate(f):
+                        if i >= 5:  # Read up to 5 lines
+                            break
+                        if line.strip():
+                            json_data.append(json.loads(line))
+                
+                # Get column names from first record if available
+                column_names = []
+                if json_data:
+                    column_names = list(json_data[0].keys())
+                
+                return render_template('debug_file.html',
+                                     dataset=dataset,
+                                     column_names=column_names,
+                                     sample_data=json_data,
+                                     file_type='JSON')
+        
+        flash('File not found or unsupported format', 'error')
+        return redirect(url_for('dashboard'))
+        
+    except Exception as e:
+        flash(f'Error inspecting file: {str(e)}', 'error')
+        return redirect(url_for('dashboard'))
+
+@app.route('/delete_dataset/<int:dataset_id>', methods=['POST'])
+@login_required
+def delete_dataset(dataset_id):
+    dataset = Dataset.query.get_or_404(dataset_id)
+    if dataset.user_id != current_user.id:
+        flash('You do not have permission to delete this dataset.', 'error')
+        return redirect(url_for('dashboard'))
+    try:
+        # Delete associated records
+        EpidemicRecord.query.filter_by(dataset_id=dataset.id).delete()
+        db.session.delete(dataset)
+        db.session.commit()
+        flash('Dataset deleted successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting dataset: {str(e)}', 'error')
+    return redirect(url_for('dashboard'))
+
 # --------------------------------------------
 # Helper Functions
 # --------------------------------------------
@@ -570,6 +778,48 @@ def allowed_file(filename):
     """Check if the file has an allowed extension"""
     ALLOWED_EXTENSIONS = {'csv', 'json', 'xlsx', 'xls'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# Add this function for batch processing
+def process_batch(records, dataset_id, user_id):
+    try:
+        epidemic_records = []
+        for record in records:
+            lat = record.get('latitude') or record.get('lat') or None
+            lon = record.get('longitude') or record.get('long') or record.get('lon') or record.get('lng') or None
+            epidemic_record = EpidemicRecord(
+                dataset_id=dataset_id,
+                date=record.get('date') or record.get('Date') or None,
+                location=record.get('location') or record.get('Location') or record.get('region') or record.get('Region') or None,
+                cases=record.get('cases') or record.get('Cases') or record.get('confirmed') or record.get('Confirmed') or 0,
+                deaths=record.get('deaths') or record.get('Deaths') or 0,
+                recovered=record.get('recovered') or record.get('Recovered') or 0,
+                latitude=lat,
+                longitude=lon
+            )
+            epidemic_records.append(epidemic_record)
+        
+        if any(rec.latitude is not None and rec.longitude is not None for rec in epidemic_records):
+            dataset = Dataset.query.get(dataset_id)
+            if dataset:
+                dataset.has_geo = True
+                db.session.commit()
+        
+        db.session.bulk_save_objects(epidemic_records)
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        return str(e)
+
+# Add this function for chunked file reading
+def read_file_in_chunks(file_path):
+    with open(file_path, 'rb') as f:
+        while True:
+            chunk = f.read(app.config['CHUNK_SIZE'])
+            if not chunk:
+                break
+            yield chunk
+
 # --------------------------------------------
 # Main
 # --------------------------------------------

@@ -1,144 +1,292 @@
-{% extends 'base.html' %}
-
-{% block title %}Visualize: {{ dataset.name }} - EMS{% endblock %}
-
-{% block head %}
+{% extends 'base.html' %} {% block title %}Visualize: {{ dataset.name }} - EMS{%
+endblock %} {% block content %}
 <!-- Leaflet CSS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-      
-<!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-
 <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='css/map.css') }}"/>
-{% endblock %}
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+  crossorigin=""
+/>
 
-{% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>{{ dataset.name }}</h1>
-            <p class="lead">{{ dataset.description }}</p>
+<!-- Leaflet JS -->
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+  crossorigin=""
+></script>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/map.css') }}" />
+
+<div class="container-fluid py-4 fade-in">
+  <div class="row">
+    <!-- Left Sidebar -->
+    <div class="col-lg-3 col-md-4">
+      <div class="card shadow-sm mb-4 fade-in-up">
+        <div class="card-header bg-transparent">
+          <h3 class="h5 mb-0">Visualization Options</h3>
         </div>
-        <div class="col-md-4 text-end">
-            <div class="btn-group">
-                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left"></i> Back to Dashboard
-                </a>
-                <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-download"></i> Export
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="/export/{{ dataset.id }}?format=csv">CSV</a></li>
-                    <li><a class="dropdown-item" href="/export/{{ dataset.id }}?format=json">JSON</a></li>
-                </ul>
-            </div>
-        </div>
-    </div>
-    
-    <div class="row">
-        <!-- Main visualization area -->
-        <div class="col-md-9">
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5>Geographic Visualization</h5>
-                    <div>
-                        <select class="form-select form-select-sm" id="value-field" style="width: auto; display: inline-block;">
-                            <option value="cases">Cases</option>
-                            <option value="deaths">Deaths</option>
-                            <option value="recovered">Recovered</option>
-                            {% if 'tested' in numeric_fields %}
-                            <option value="tested">Tested</option>
-                            {% endif %}
-                        </select>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div id="map"></div>
-                </div>
+        <div class="card-body">
+          <form id="visualize-form" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="mb-3">
+              <label for="chart_type" class="form-label">Chart Type</label>
+              <select class="form-select" id="chart_type" name="chart_type">
+                <option value="line" {% if chart_type == 'line' %}selected{% endif %}>Line Chart</option>
+                <option value="bar" {% if chart_type == 'bar' %}selected{% endif %}>Bar Chart</option>
+                <option value="scatter" {% if chart_type == 'scatter' %}selected{% endif %}>Scatter Plot</option>
+                <option value="pie" {% if chart_type == 'pie' %}selected{% endif %}>Pie Chart</option>
+                <option value="map" {% if chart_type == 'map' %}selected{% endif %}>Map View</option>
+                <option value="heatmap" {% if chart_type == 'heatmap' %}selected{% endif %}>Heat Map</option>
+              </select>
             </div>
             
-            <div class="card">
-                <div class="card-header">
-                    <h5>Data Preview</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover">
-                            <thead>
-                                <tr>
-                                    {% for column in preview_columns %}
-                                    <th>{{ column }}</th>
-                                    {% endfor %}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for row in preview_data %}
-                                <tr>
-                                    {% for column in preview_columns %}
-                                    <td>{{ row[column] }}</td>
-                                    {% endfor %}
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            <div class="mb-3">
+              <label for="data_column" class="form-label">Data Column</label>
+              <select class="form-select" id="data_column" name="data_column">
+                {% for column in columns %}
+                <option value="{{ column }}" {% if data_column == column %}selected{% endif %}>{{ column|capitalize }}</option>
+                {% endfor %}
+              </select>
             </div>
-        </div>
-        
-        <!-- Sidebar with dataset info -->
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Dataset Information</h5>
-                </div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Type
-                            <span class="badge bg-primary">{{ dataset.file_type|capitalize }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Records
-                            <span class="badge bg-primary">{{ dataset.record_count }}</span>
-                        </li>
-                        {% if dataset.date_range_start %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Date Range
-                            <span>{{ dataset.date_range_start.strftime('%Y-%m-%d') }} to {{ dataset.date_range_end.strftime('%Y-%m-%d') }}</span>
-                        </li>
-                        {% endif %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Uploaded
-                            <span>{{ dataset.upload_date.strftime('%Y-%m-%d') }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Visibility
-                            <span>
-                                {% if dataset.sharing_status == 'public' %}
-                                <span class="badge bg-success">Public</span>
-                                {% elif dataset.sharing_status == 'private' %}
-                                <span class="badge bg-secondary">Private</span>
-                                {% else %}
-                                <span class="badge bg-primary">Limited</span>
-                                {% endif %}
-                            </span>
-                        </li>
-                    </ul>
-                </div>
+            
+            <div class="mb-3">
+              <label for="group_by" class="form-label">Group By</label>
+              <select class="form-select" id="group_by" name="group_by">
+                <option value="none" {% if group_by == 'none' %}selected{% endif %}>None</option>
+                {% for column in columns %}
+                <option value="{{ column }}" {% if group_by == column %}selected{% endif %}>{{ column|capitalize }}</option>
+                {% endfor %}
+              </select>
             </div>
+            
+            <div class="mb-3">
+              <label for="time_period" class="form-label">Time Period</label>
+              <select class="form-select" id="time_period" name="time_period">
+                <option value="all" {% if time_period == 'all' %}selected{% endif %}>All Time</option>
+                <option value="week" {% if time_period == 'week' %}selected{% endif %}>Last Week</option>
+                <option value="month" {% if time_period == 'month' %}selected{% endif %}>Last Month</option>
+                <option value="year" {% if time_period == 'year' %}selected{% endif %}>Last Year</option>
+                <option value="custom" {% if time_period == 'custom' %}selected{% endif %}>Custom Range</option>
+              </select>
+            </div>
+            
+            <div id="custom_dates" class="mb-3 {% if time_period != 'custom' %}d-none{% endif %}">
+              <div class="row">
+                <div class="col-md-6">
+                  <label for="start_date" class="form-label">Start Date</label>
+                  <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date or '' }}">
+                </div>
+                <div class="col-md-6">
+                  <label for="end_date" class="form-label">End Date</label>
+                  <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date or '' }}">
+                </div>
+              </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary w-100" id="update-chart">
+              <i class="fas fa-sync-alt me-2"></i>Update Visualization
+            </button>
+          </form>
         </div>
+      </div>
+      
+      <!-- Dataset Info Card -->
+      <div class="card shadow-sm mb-4 slide-in-right" style="animation-delay: 0.2s">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+          <h3 class="h5 mb-0">Dataset Info</h3>
+          <a href="{{ url_for('dashboard') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back
+          </a>
+        </div>
+        <div class="card-body">
+          <h4 class="h6 mb-3">{{ dataset.name }}</h4>
+          
+          <div class="mb-2">
+            <span class="text-muted">Records:</span>
+            <span class="fw-bold">{{ dataset.record_count }}</span>
+          </div>
+          
+          <div class="mb-2">
+            <span class="text-muted">Columns:</span>
+            <span class="fw-bold">{{ columns|length }}</span>
+          </div>
+          
+          <div class="mb-2">
+            <span class="text-muted">Date Range:</span>
+            <span class="fw-bold">{{ date_range }}</span>
+          </div>
+          
+          <div class="mb-2">
+            <span class="text-muted">Uploaded:</span>
+            <span class="fw-bold">{{ dataset.upload_date.strftime('%d %b %Y') }}</span>
+          </div>
+          
+          {% if dataset.description %}
+          <div class="mt-3">
+            <span class="text-muted">Description:</span>
+            <p class="small mt-1">{{ dataset.description }}</p>
+          </div>
+          {% endif %}
+          
+          <div class="mt-3">
+            <a href="{{ url_for('export_dataset', dataset_id=dataset.id) }}" class="btn btn-sm btn-outline-primary w-100">
+              <i class="fas fa-download me-1"></i>Export Data
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
+    
+    <!-- Main Visualization Area -->
+    <div class="col-lg-9 col-md-8">
+      <div class="card shadow-sm h-100 fade-in-up" style="animation-delay: 0.1s">
+        <div class="card-header bg-transparent">
+          <div class="d-flex justify-content-between align-items-center">
+            <h3 class="h5 mb-0">{{ visualization_title }}</h3>
+            <!-- Visualization Controls -->
+            <div class="btn-group">
+              <button id="fullscreen-btn" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-expand"></i>
+              </button>
+              <button id="download-btn" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-download"></i>
+              </button>
+              <button id="share-btn" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-share-alt"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Visualization will be rendered here -->
+          <div id="visualization-container" class="w-100 h-100" style="min-height: 500px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Insights Section -->
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="card shadow-sm fade-in-up" style="animation-delay: 0.4s">
+        <div class="card-header bg-transparent">
+          <h3 class="h5 mb-0">Insights & Analysis</h3>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="card mb-3">
+                <div class="card-body">
+                  <h4 class="h6">Summary Statistics</h4>
+                  <table class="table table-sm">
+                    <tbody>
+                      {% for stat, value in summary_stats.items() %}
+                      <tr>
+                        <td>{{ stat|capitalize }}</td>
+                        <td class="text-end">{{ value }}</td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card mb-3">
+                <div class="card-body">
+                  <h4 class="h6">Trend Analysis</h4>
+                  <div id="trend-chart" style="height: 200px;"></div>
+                  <p class="small text-muted mt-2">{{ trend_analysis }}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-12">
+              <div class="card">
+                <div class="card-body">
+                  <h4 class="h6">Key Observations</h4>
+                  <ul class="small">
+                    {% for observation in key_observations %}
+                    <li class="mb-1">{{ observation }}</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Hidden data for JavaScript -->
-<div id="map-data" style="display: none;">{{ map_data|safe }}</div>
-{% endblock %}
+<div id="map-data" style="display: none">{{ map_data|safe }}</div>
+<div id="trend-data" style="display: none">{{ trend_data|safe }}</div>
 
-{% block scripts %}
+<!-- JavaScript -->
 <script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Toggle custom date inputs based on time period selection
+    const timePeriod = document.getElementById('time_period');
+    const customDates = document.getElementById('custom_dates');
+    
+    timePeriod.addEventListener('change', function() {
+      if (this.value === 'custom') {
+        customDates.classList.remove('d-none');
+      } else {
+        customDates.classList.add('d-none');
+      }
+    });
+    
+    // Show loading overlay on form submission
+    const form = document.getElementById('visualize-form');
+    form.addEventListener('submit', function() {
+      showLoadingOverlay();
+    });
+    
+    // Fullscreen functionality
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const visualizationContainer = document.getElementById('visualization-container');
+    
+    fullscreenBtn.addEventListener('click', function() {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        visualizationContainer.requestFullscreen();
+      }
+    });
+    
+    // Download functionality (would need server-side implementation)
+    const downloadBtn = document.getElementById('download-btn');
+    downloadBtn.addEventListener('click', function() {
+      // This would typically trigger a download of the current visualization
+      alert('Download functionality will be implemented soon!');
+    });
+    
+    // Share functionality (would need server-side implementation)
+    const shareBtn = document.getElementById('share-btn');
+    shareBtn.addEventListener('click', function() {
+      // This would typically open a share dialog
+      alert('Share functionality will be implemented soon!');
+    });
+    
+    // Initialize charts based on the current visualization type
+    initializeVisualization();
+    
+    function initializeVisualization() {
+      // This function would initialize the specific visualization
+      // based on the chart_type selected by the user
+      
+      // Example initialization of trend chart
+      if (document.getElementById('trend-chart')) {
+        // Simplified example - would be replaced with actual chart library initialization
+        const trendChart = document.getElementById('trend-chart');
+        // Initialize chart with data from backend
+      }
+    }
+  });
+</script>
 {% endblock %}

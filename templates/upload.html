@@ -1,126 +1,237 @@
-
-{% extends 'base.html' %}
-
-{% block title %}Upload Data - Epidemic Monitoring System{% endblock %}
-
-{% block content %}
-<div class="container">
-    <h1 class="mb-4">Upload Epidemic Dataset</h1>
-    
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card">
-                <div class="card-body">
-                    <form method="POST" enctype="multipart/form-data">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        
-                        <div class="mb-3">
-                            <label for="name" class="form-label">Dataset Name</label>
-                            <input type="text" class="form-control" id="name" name="name" required>
-                            <div class="form-text">Choose a descriptive name for your dataset</div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="description" class="form-label">Description</label>
-                            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
-                            <div class="form-text">Briefly describe what this dataset contains</div>
-                        </div>
-                        
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="data_type" class="form-label">Data Type</label>
-                                <select class="form-control" id="data_type" name="data_type" required>
-                                    <option value="cases">Case Data</option>
-                                    <option value="deaths">Mortality Data</option>
-                                    <option value="vaccinations">Vaccination Data</option>
-                                    <option value="hospitalizations">Hospitalization Data</option>
-                                    <option value="testing">Testing Data</option>
-                                    <option value="other">Other</option>
-                                </select>
-                            </div>
-                            
-                            <div class="col-md-6">
-                                <label for="sharing_status" class="form-label">Sharing Preference</label>
-                                <select class="form-control" id="sharing_status" name="sharing_status" required>
-                                    <option value="private">Private (only me)</option>
-                                    <option value="public">Public (everyone)</option>
-                                    <option value="limited">Limited (select users)</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label d-block">Data Contains</label>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" id="has_geo" name="has_geo" value="1">
-                                <label class="form-check-label" for="has_geo">Geographic coordinates (latitude/longitude)</label>
-                            </div>
-                            
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" id="has_time" name="has_time" value="1">
-                                <label class="form-check-label" for="has_time">Time series data (dates)</label>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="file" class="form-label">Upload File</label>
-                            <input type="file" class="form-control" id="file" name="file" required>
-                            <div class="form-text">Accepted formats: CSV, JSON, Excel (.xlsx, .xls)</div>
-                        </div>
-                        
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <button type="submit" class="btn btn-primary" id="upload-btn">
-                                <i class="bi bi-upload me-2"></i>Upload & Process
-                            </button>
-                            <a href="{{ url_for('dashboard') }}" class="btn btn-light">
-                                <i class="bi bi-x-circle me-2"></i>Cancel
-                            </a>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5>File Format Requirements</h5>
-                </div>
-                <div class="card-body">
-                    <p>For proper visualization, your data should include:</p>
-                    <ul>
-                        <li><strong>Geographic coordinates</strong>: Columns named 'latitude' and 'longitude' (or 'lat'/'lon')</li>
-                        <li><strong>Date information</strong>: A column with date values (e.g., 'date', 'report_date')</li>
-                        <li><strong>Location names</strong>: Columns for location names (e.g., 'location', 'city', 'country')</li>
-                        <li><strong>Epidemic metrics</strong>: Columns for case counts, deaths, etc.</li>
-                    </ul>
-                    
-                    <div class="mt-3">
-                        <div class="accordion" id="sampleFormatAccordion">
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="headingOne">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
-                                        View Sample Format
-                                    </button>
-                                </h2>
-                                <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#sampleFormatAccordion">
-                                    <div class="accordion-body">
-                                        <h6>Sample CSV Format:</h6>
-                                        <pre class="bg-light p-2"><code>date,location,latitude,longitude,cases,deaths,recovered
-2023-01-01,New York,40.7128,-74.0060,120,5,80
-2023-01-01,Los Angeles,34.0522,-118.2437,90,3,50
-2023-01-02,New York,40.7128,-74.0060,140,7,95
-2023-01-02,Los Angeles,34.0522,-118.2437,105,4,70</code></pre>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+{% extends "base.html" %} {% block title %}Upload Dataset - Epidemic Monitor{%
+endblock %} {% block content %}
+<div class="container py-5 fade-in">
+  <div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+      <div class="card shadow-sm fade-in-up">
+        <div class="card-header bg-transparent">
+          <h2 class="h3 mb-0">Upload Dataset</h2>
         </div>
-    </div>
-</div>
-{% endblock %}
+        <div class="card-body">
+          <form
+            method="POST"
+            enctype="multipart/form-data"
+            id="upload-form"
+            class="needs-validation"
+            novalidate
+          >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
-{% block scripts %}
-<script src="{{ url_for('static', filename='js/submission-handler.js') }}"></script>
+            <!-- File upload zone -->
+            <div class="mb-4">
+              <label class="form-label"
+                >Upload CSV, JSON, XLSX, or XLS File</label
+              >
+              <div
+                class="drop-zone p-5 border rounded text-center"
+                id="drop-zone"
+              >
+                <div class="drop-zone-content">
+                  <i
+                    class="fas fa-cloud-upload-alt fa-3x mb-3 text-primary"
+                  ></i>
+                  <h4 class="mb-2">Drag & Drop File Here</h4>
+                  <p class="text-muted mb-3">or</p>
+                  <label class="btn btn-outline-primary position-relative">
+                    Browse Files
+                    <input
+                      type="file"
+                      name="file"
+                      id="file-input"
+                      class="position-absolute invisible"
+                      accept=".csv,.json,.xlsx,.xls"
+                    />
+                  </label>
+                  <small class="d-block mt-2 text-muted"
+                    >Supported formats: CSV, JSON, XLSX, XLS</small
+                  >
+                </div>
+                <div class="file-info mt-3 d-none" id="file-info">
+                  <div class="alert alert-info d-flex align-items-center">
+                    <i class="fas fa-file-alt me-3 fa-2x"></i>
+                    <div>
+                      <p class="mb-0" id="file-name">filename.csv</p>
+                      <small id="file-size" class="text-muted"
+                        >Size: 0 KB</small
+                      >
+                    </div>
+                    <button
+                      type="button"
+                      class="btn-close ms-auto"
+                      id="remove-file"
+                      aria-label="Remove file"
+                    ></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dataset details -->
+            <div class="mb-4">
+              <label for="dataset-name" class="form-label">Dataset Name</label>
+              <input
+                type="text"
+                class="form-control"
+                id="dataset-name"
+                name="name"
+                placeholder="Enter a descriptive name for your dataset"
+                required
+              />
+              <div class="invalid-feedback">Please provide a dataset name</div>
+            </div>
+
+            <div class="mb-4">
+              <label for="dataset-description" class="form-label"
+                >Description (Optional)</label
+              >
+              <textarea
+                class="form-control"
+                id="dataset-description"
+                name="description"
+                rows="3"
+                placeholder="Briefly describe your dataset and its contents"
+              ></textarea>
+            </div>
+
+            <div class="mt-4">
+              <button
+                type="submit"
+                class="btn btn-primary w-100"
+                id="upload-button"
+                disabled
+              >
+                <i class="fas fa-upload me-2"></i>Upload Dataset
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Guidelines -->
+      <div
+        class="card mt-4 shadow-sm slide-in-right"
+        style="animation-delay: 0.3s"
+      >
+        <div class="card-header bg-transparent">
+          <h3 class="h5 mb-0">Upload Guidelines</h3>
+        </div>
+        <div class="card-body">
+          <p class="text-muted small mb-3">
+            For optimal visualization, your dataset should include the following
+            columns:
+          </p>
+
+          <h4 class="h6 mb-2">Required Columns</h4>
+          <ul class="small mb-4">
+            <li><strong>location:</strong> Country, state, or region name</li>
+            <li><strong>date:</strong> Date in YYYY-MM-DD format</li>
+            <li><strong>cases:</strong> Number of cases reported</li>
+          </ul>
+
+          <h4 class="h6 mb-2">Optional Columns</h4>
+          <ul class="small">
+            <li><strong>deaths:</strong> Number of deaths reported</li>
+            <li><strong>recovered:</strong> Number of recoveries</li>
+            <li><strong>latitude:</strong> Geographical latitude</li>
+            <li><strong>longitude:</strong> Geographical longitude</li>
+            <li><strong>population:</strong> Population size</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const dropZone = document.getElementById("drop-zone");
+    const fileInput = document.getElementById("file-input");
+    const fileInfo = document.getElementById("file-info");
+    const fileName = document.getElementById("file-name");
+    const fileSize = document.getElementById("file-size");
+    const removeFile = document.getElementById("remove-file");
+    const uploadButton = document.getElementById("upload-button");
+    const form = document.getElementById("upload-form");
+
+    // Handle file drop
+    dropZone.addEventListener("dragover", function (e) {
+      e.preventDefault();
+      dropZone.classList.add("border-primary");
+    });
+
+    dropZone.addEventListener("dragleave", function () {
+      dropZone.classList.remove("border-primary");
+    });
+
+    dropZone.addEventListener("drop", function (e) {
+      e.preventDefault();
+      dropZone.classList.remove("border-primary");
+
+      if (e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        updateFileInfo(fileInput.files[0]);
+      }
+    });
+
+    // Handle file selection
+    fileInput.addEventListener("change", function () {
+      if (fileInput.files.length) {
+        updateFileInfo(fileInput.files[0]);
+      }
+    });
+
+    // Remove selected file
+    removeFile.addEventListener("click", function () {
+      fileInput.value = "";
+      fileInfo.classList.add("d-none");
+      uploadButton.disabled = true;
+    });
+
+    // Update file info display
+    function updateFileInfo(file) {
+      fileName.textContent = file.name;
+      fileSize.textContent = `Size: ${formatFileSize(file.size)}`;
+      fileInfo.classList.remove("d-none");
+      uploadButton.disabled = false;
+    }
+
+    // Format file size
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + " bytes";
+      else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+      else return (bytes / 1048576).toFixed(1) + " MB";
+    }
+
+    // Form validation
+    form.addEventListener("submit", function (event) {
+      if (!form.checkValidity()) {
+        event.preventDefault();
+        event.stopPropagation();
+      } else {
+        // Show loading when form is valid and submitted
+        showLoadingOverlay();
+      }
+
+      form.classList.add("was-validated");
+    });
+  });
+</script>
+
+<style>
+  .drop-zone {
+    transition: all 0.3s ease;
+    border: 2px dashed var(--border-color);
+    background-color: var(--bg-secondary);
+  }
+
+  .drop-zone:hover {
+    border-color: var(--primary-color);
+    background-color: rgba(var(--primary-rgb), 0.05);
+  }
+
+  .drop-zone.border-primary {
+    border-color: var(--primary-color);
+    background-color: rgba(var(--primary-rgb), 0.05);
+  }
+</style>
 {% endblock %}

@@ -1,0 +1,658 @@
+{% extends 'base.html' %} {% block title %}Help & Support - Epidemic Monitor{%
+endblock %} {% block content %}
+<div class="container py-4">
+  <div class="row">
+    <!-- Sidebar navigation -->
+    <div class="col-md-3">
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="mb-0">Help Center</h5>
+        </div>
+        <div class="list-group list-group-flush">
+          <a
+            href="#getting-started"
+            class="list-group-item list-group-item-action active"
+            data-bs-toggle="list"
+          >
+            <i class="bi bi-book me-2"></i> Getting Started
+          </a>
+          <a
+            href="#data-management"
+            class="list-group-item list-group-item-action"
+            data-bs-toggle="list"
+          >
+            <i class="bi bi-database me-2"></i> Data Management
+          </a>
+          <a
+            href="#visualization"
+            class="list-group-item list-group-item-action"
+            data-bs-toggle="list"
+          >
+            <i class="bi bi-graph-up me-2"></i> Visualization
+          </a>
+          <a
+            href="#faq"
+            class="list-group-item list-group-item-action"
+            data-bs-toggle="list"
+          >
+            <i class="bi bi-question-circle me-2"></i> FAQ
+          </a>
+          <a
+            href="#contact"
+            class="list-group-item list-group-item-action"
+            data-bs-toggle="list"
+          >
+            <i class="bi bi-envelope me-2"></i> Contact Support
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main content -->
+    <div class="col-md-9">
+      <div class="tab-content">
+        <!-- Getting Started -->
+        <div class="tab-pane fade show active" id="getting-started">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">Getting Started</h5>
+            </div>
+            <div class="card-body">
+              <h4>Welcome to Epidemic Monitor</h4>
+              <p>
+                This guide will help you get started with using our platform for
+                epidemic data analysis.
+              </p>
+
+              <div class="mt-4">
+                <h5><i class="bi bi-1-circle me-2"></i>Create an Account</h5>
+                <p>
+                  If you haven't already, sign up for an account to access all
+                  features of the platform.
+                </p>
+                <a
+                  href="{{ url_for('signup') }}"
+                  class="btn btn-outline-primary btn-sm"
+                  >Sign Up</a
+                >
+              </div>
+
+              <div class="mt-4">
+                <h5><i class="bi bi-2-circle me-2"></i>Upload Your Dataset</h5>
+                <p>
+                  Upload your epidemic data in CSV, JSON, or Excel format. Make
+                  sure your data includes:
+                </p>
+                <ul>
+                  <li>Date (YYYY-MM-DD format)</li>
+                  <li>Location (city, region, or country)</li>
+                  <li>Cases (number of confirmed cases)</li>
+                  <li>Optional: Deaths, Recovered, Latitude, Longitude</li>
+                </ul>
+                <a
+                  href="{{ url_for('upload') }}"
+                  class="btn btn-outline-primary btn-sm"
+                  >Upload Data</a
+                >
+              </div>
+
+              <div class="mt-4">
+                <h5><i class="bi bi-3-circle me-2"></i>Explore Your Data</h5>
+                <p>
+                  Once uploaded, you can visualize your data on maps, create
+                  charts, and analyze trends.
+                </p>
+                <a
+                  href="{{ url_for('dashboard') }}"
+                  class="btn btn-outline-primary btn-sm"
+                  >Go to Dashboard</a
+                >
+              </div>
+
+              <div class="alert alert-info mt-4">
+                <h6><i class="bi bi-lightbulb me-2"></i>Quick Tip</h6>
+                <p class="mb-0">
+                  Check out our sample datasets if you want to explore the
+                  platform features before uploading your own data.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Data Management -->
+        <div class="tab-pane fade" id="data-management">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">Data Management</h5>
+            </div>
+            <div class="card-body">
+              <h4>Managing Your Datasets</h4>
+              <p>
+                Learn how to upload, organize, and maintain your epidemic data.
+              </p>
+
+              <div class="accordion mt-4" id="dataAccordion">
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button
+                      class="accordion-button"
+                      type="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#collapseOne"
+                    >
+                      Data Format Requirements
+                    </button>
+                  </h2>
+                  <div
+                    id="collapseOne"
+                    class="accordion-collapse collapse show"
+                    data-bs-parent="#dataAccordion"
+                  >
+                    <div class="accordion-body">
+                      <p>Our system supports the following file formats:</p>
+                      <ul>
+                        <li>
+                          <strong>CSV</strong> - Comma-separated values file
+                        </li>
+                        <li>
+                          <strong>JSON</strong> - JavaScript Object Notation
+                          file
+                        </li>
+                        <li>
+                          <strong>XLSX/XLS</strong> - Microsoft Excel
+                          spreadsheet
+                        </li>
+                      </ul>
+
+                      <p>Required columns for all datasets:</p>
+                      <ul>
+                        <li>
+                          <strong>Date</strong> - Date of the record (YYYY-MM-DD
+                          format)
+                        </li>
+                        <li>
+                          <strong>Location</strong> - Geographical location
+                          (city, region, country)
+                        </li>
+                        <li>
+                          <strong>Cases</strong> - Number of confirmed cases
+                        </li>
+                      </ul>
+
+                      <p>Recommended optional columns:</p>
+                      <ul>
+                        <li><strong>Deaths</strong> - Number of deaths</li>
+                        <li>
+                          <strong>Recovered</strong> - Number of recovered cases
+                        </li>
+                        <li>
+                          <strong>Latitude</strong> - Geographical latitude (for
+                          map visualization)
+                        </li>
+                        <li>
+                          <strong>Longitude</strong> - Geographical longitude
+                          (for map visualization)
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button
+                      class="accordion-button collapsed"
+                      type="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#collapseTwo"
+                    >
+                      Uploading Data
+                    </button>
+                  </h2>
+                  <div
+                    id="collapseTwo"
+                    class="accordion-collapse collapse"
+                    data-bs-parent="#dataAccordion"
+                  >
+                    <div class="accordion-body">
+                      <p>To upload a new dataset:</p>
+                      <ol>
+                        <li>
+                          Go to the
+                          <a href="{{ url_for('upload') }}">Upload</a> page
+                        </li>
+                        <li>Drag and drop your file or click to browse</li>
+                        <li>
+                          Enter a name and optional description for your dataset
+                        </li>
+                        <li>Click "Upload Dataset" to process your file</li>
+                      </ol>
+
+                      <div class="alert alert-warning">
+                        <p class="mb-0">
+                          <strong>Note:</strong> Large files may take some time
+                          to process. Please be patient during the upload.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button
+                      class="accordion-button collapsed"
+                      type="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#collapseThree"
+                    >
+                      Managing Existing Datasets
+                    </button>
+                  </h2>
+                  <div
+                    id="collapseThree"
+                    class="accordion-collapse collapse"
+                    data-bs-parent="#dataAccordion"
+                  >
+                    <div class="accordion-body">
+                      <p>
+                        From your dashboard, you can manage all your datasets:
+                      </p>
+                      <ul>
+                        <li>
+                          <strong>Visualize</strong> - View interactive
+                          visualizations of your data
+                        </li>
+                        <li>
+                          <strong>Export</strong> - Download your data in
+                          various formats
+                        </li>
+                        <li>
+                          <strong>Delete</strong> - Remove datasets you no
+                          longer need
+                        </li>
+                      </ul>
+
+                      <p>To share a dataset with other users:</p>
+                      <ol>
+                        <li>Go to the dataset's visualization page</li>
+                        <li>Look for the "Share" button</li>
+                        <li>
+                          Enter the email address of the user you want to share
+                          with
+                        </li>
+                        <li>Select permission level (view or edit)</li>
+                        <li>Click "Share" to send the invitation</li>
+                      </ol>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Visualization -->
+        <div class="tab-pane fade" id="visualization">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">Visualization Guide</h5>
+            </div>
+            <div class="card-body">
+              <h4>Understanding Visualizations</h4>
+              <p>
+                Learn how to create and interpret different types of
+                visualizations.
+              </p>
+
+              <div class="row mt-4">
+                <div class="col-md-6">
+                  <div class="card mb-4">
+                    <div class="card-header bg-light">
+                      <h6 class="mb-0">
+                        <i class="bi bi-map me-2"></i>Geographic Map
+                      </h6>
+                    </div>
+                    <div class="card-body">
+                      <p>
+                        The map visualization shows your data points on a world
+                        map:
+                      </p>
+                      <ul>
+                        <li>Each circle represents a location</li>
+                        <li>
+                          Circle size indicates the value (cases, deaths, etc.)
+                        </li>
+                        <li>Color intensity also corresponds to the value</li>
+                        <li>Click on circles to see detailed information</li>
+                      </ul>
+                      <p>
+                        <strong>Tip:</strong> Use the dropdown menu to switch
+                        between different metrics (cases, deaths, recovered).
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <div class="card mb-4">
+                    <div class="card-header bg-light">
+                      <h6 class="mb-0">
+                        <i class="bi bi-graph-up me-2"></i>Trend Analysis
+                      </h6>
+                    </div>
+                    <div class="card-body">
+                      <p>
+                        The trend analysis shows how your data changes over
+                        time:
+                      </p>
+                      <ul>
+                        <li>X-axis represents dates</li>
+                        <li>Y-axis shows the values (cases, deaths, etc.)</li>
+                        <li>
+                          Multiple metrics can be displayed simultaneously
+                        </li>
+                        <li>Toggle between line and bar charts</li>
+                      </ul>
+                      <p>
+                        <strong>Tip:</strong> Hover over data points to see
+                        exact values for specific dates.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="alert alert-info">
+                <h6><i class="bi bi-lightbulb me-2"></i>Pro Tip</h6>
+                <p class="mb-0">
+                  For better geographical visualizations, make sure your dataset
+                  includes latitude and longitude coordinates. If these are
+                  missing, our system will attempt to geocode locations based on
+                  names, but accuracy may vary.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FAQ -->
+        <div class="tab-pane fade" id="faq">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">Frequently Asked Questions</h5>
+            </div>
+            <div class="card-body">
+              <div class="accordion" id="faqAccordion">
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button
+                      class="accordion-button"
+                      type="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#faqOne"
+                    >
+                      What file formats are supported?
+                    </button>
+                  </h2>
+                  <div
+                    id="faqOne"
+                    class="accordion-collapse collapse show"
+                    data-bs-parent="#faqAccordion"
+                  >
+                    <div class="accordion-body">
+                      Our system supports CSV, JSON, and Excel (XLSX/XLS) file
+                      formats. CSV is recommended for the best performance with
+                      large datasets.
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button
+                      class="accordion-button collapsed"
+                      type="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#faqTwo"
+                    >
+                      How large can my dataset be?
+                    </button>
+                  </h2>
+                  <div
+                    id="faqTwo"
+                    class="accordion-collapse collapse"
+                    data-bs-parent="#faqAccordion"
+                  >
+                    <div class="accordion-body">
+                      The maximum file size is 16MB. For larger datasets,
+                      consider splitting them into multiple files or contact
+                      support for assistance.
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button
+                      class="accordion-button collapsed"
+                      type="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#faqThree"
+                    >
+                      Can I share my visualizations with others?
+                    </button>
+                  </h2>
+                  <div
+                    id="faqThree"
+                    class="accordion-collapse collapse"
+                    data-bs-parent="#faqAccordion"
+                  >
+                    <div class="accordion-body">
+                      Yes! You can share your datasets and visualizations with
+                      other registered users. Additionally, you can export
+                      visualizations as images or embed them in other websites.
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button
+                      class="accordion-button collapsed"
+                      type="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#faqFour"
+                    >
+                      How do I enable the map visualization?
+                    </button>
+                  </h2>
+                  <div
+                    id="faqFour"
+                    class="accordion-collapse collapse"
+                    data-bs-parent="#faqAccordion"
+                  >
+                    <div class="accordion-body">
+                      To enable map visualization, your dataset must include
+                      geographical information. This can be either latitude and
+                      longitude coordinates or location names (cities,
+                      countries) that our system can geocode.
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button
+                      class="accordion-button collapsed"
+                      type="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#faqFive"
+                    >
+                      Is my data secure on your platform?
+                    </button>
+                  </h2>
+                  <div
+                    id="faqFive"
+                    class="accordion-collapse collapse"
+                    data-bs-parent="#faqAccordion"
+                  >
+                    <div class="accordion-body">
+                      Yes, we take data security seriously. All data is
+                      encrypted during transit and at rest. You maintain full
+                      control over who can access your datasets, and your data
+                      is never shared with third parties without your consent.
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion-item">
+                  <h2 class="accordion-header">
+                    <button
+                      class="accordion-button collapsed"
+                      type="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#faqSix"
+                    >
+                      How do I delete my account?
+                    </button>
+                  </h2>
+                  <div
+                    id="faqSix"
+                    class="accordion-collapse collapse"
+                    data-bs-parent="#faqAccordion"
+                  >
+                    <div class="accordion-body">
+                      You can delete your account in the Settings page under the
+                      "Data Management" tab. This will permanently remove all
+                      your data from our system. Note that this action cannot be
+                      undone.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contact Support -->
+        <div class="tab-pane fade" id="contact">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">Contact Support</h5>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6">
+                  <h5>Get Help</h5>
+                  <p>
+                    Need assistance with the Epidemic Monitor platform? Our
+                    support team is here to help!
+                  </p>
+
+                  <form>
+                    <div class="mb-3">
+                      <label for="support-name" class="form-label"
+                        >Your Name</label
+                      >
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="support-name"
+                        value="{{ current_user.username }}"
+                        readonly
+                      />
+                    </div>
+
+                    <div class="mb-3">
+                      <label for="support-email" class="form-label"
+                        >Email Address</label
+                      >
+                      <input
+                        type="email"
+                        class="form-control"
+                        id="support-email"
+                        value="{{ current_user.email }}"
+                        readonly
+                      />
+                    </div>
+
+                    <div class="mb-3">
+                      <label for="support-topic" class="form-label"
+                        >Topic</label
+                      >
+                      <select class="form-select" id="support-topic">
+                        <option value="general">General Question</option>
+                        <option value="technical">Technical Issue</option>
+                        <option value="account">Account Problem</option>
+                        <option value="feedback">Feedback/Suggestion</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+
+                    <div class="mb-3">
+                      <label for="support-message" class="form-label"
+                        >Message</label
+                      >
+                      <textarea
+                        class="form-control"
+                        id="support-message"
+                        rows="5"
+                        placeholder="Please describe your issue or question in detail..."
+                      ></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                      Submit Support Request
+                    </button>
+                  </form>
+                </div>
+
+                <div class="col-md-6">
+                  <h5>Contact Information</h5>
+                  <p>You can also reach us through the following channels:</p>
+
+                  <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-envelope-fill fs-4 me-3 text-primary"></i>
+                    <div>
+                      <h6 class="mb-0">Email</h6>
+                      <p class="mb-0">support@epidemicmonitor.com</p>
+                    </div>
+                  </div>
+
+                  <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-telephone-fill fs-4 me-3 text-primary"></i>
+                    <div>
+                      <h6 class="mb-0">Phone</h6>
+                      <p class="mb-0">+1 (800) 123-4567</p>
+                    </div>
+                  </div>
+
+                  <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-clock-fill fs-4 me-3 text-primary"></i>
+                    <div>
+                      <h6 class="mb-0">Support Hours</h6>
+                      <p class="mb-0">Monday - Friday: 9am - 5pm (EST)</p>
+                    </div>
+                  </div>
+
+                  <div class="alert alert-info mt-4">
+                    <h6 class="mb-2">
+                      <i class="bi bi-info-circle me-2"></i>Response Time
+                    </h6>
+                    <p class="mb-0">
+                      We typically respond to all inquiries within 24 hours
+                      during business days.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
