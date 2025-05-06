@@ -146,5 +146,12 @@ endblock %} {% block content %}
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<!-- Enhanced Map Script -->
+<script src="{{ url_for('static', filename='js/enhanced-map.js') }}"></script>
+
+<!-- Dashboard Charts Script -->
+<script src="{{ url_for('static', filename='js/dashboard-charts.js') }}"></script>
+
+<!-- Insights Generator Script -->
+<script src="{{ url_for('static', filename='js/Insights-generator.js') }}"></script>
 {% endblock %}
