@@ -4,9 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
 db = SQLAlchemy()
-
-
-# From Nandhini's ERD
+# from Nandhini's ERD
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
 
@@ -16,26 +14,31 @@ class User(db.Model, UserMixin):
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
-
+    full_name = db.Column(db.String(120))
+    bio = db.Column(db.Text)
+    work_location = db.Column(db.String(100)) 
+    address = db.Column(db.String(255))
+    postcode = db.Column(db.String(20))
+    city = db.Column(db.String(100))
+    mobile = db.Column(db.String(20))
+    dob = db.Column(db.Date)
+    profile_picture = db.Column(db.String(255))
+    
     # Relationships
-    datasets = db.relationship('Dataset', backref='user', lazy=True)
-    shared_access = db.relationship('SharedDataset', backref='shared_user',
-                                    foreign_keys='SharedDataset.shared_with_id', lazy=True)
-    reset_tokens = db.relationship('PasswordResetToken', backref='user', lazy=True)
+    datasets = db.relationship('Dataset', backref='owner', lazy=True)
+    shared_datasets = db.relationship('SharedDataset', backref='shared_user', lazy=True, foreign_keys='SharedDataset.shared_with_id')
+    audit_logs = db.relationship('AuditLog', backref='user', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
-
+        
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
-
-    def __repr__(self):
-        return f'<User {self.username}>'
 
 
 class Dataset(db.Model):
     __tablename__ = 'datasets'
-
+    
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
@@ -46,20 +49,19 @@ class Dataset(db.Model):
     date_range_start = db.Column(db.Date)
     date_range_end = db.Column(db.Date)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    # New fields, 01/05/2025
+    filepath = db.Column(db.String(255))  
+    has_geo = db.Column(db.Boolean, default=False)  
+    has_time = db.Column(db.Boolean, default=False)  
+    sharing_status = db.Column(db.String(20), default='private')
 
-    # Relationships
-    records = db.relationship('EpidemicRecord', backref='dataset', lazy=True,
-                              cascade='all, delete-orphan')
-    shares = db.relationship('SharedDataset', backref='dataset', lazy=True,
-                             cascade='all, delete-orphan')
-
-    def __repr__(self):
-        return f'<Dataset {self.name}>'
-
+    epidemic_records = db.relationship('EpidemicRecord', backref='dataset', lazy=True)
+    shared_with = db.relationship('SharedDataset', backref='dataset', lazy=True)
 
 class EpidemicRecord(db.Model):
     __tablename__ = 'epidemic_records'
-
+    
     id = db.Column(db.Integer, primary_key=True)
     dataset_id = db.Column(db.Integer, db.ForeignKey('datasets.id'), nullable=False)
     date = db.Column(db.Date, nullable=False)
@@ -76,34 +78,40 @@ class EpidemicRecord(db.Model):
     region = db.Column(db.String(100))
     country = db.Column(db.String(100))
 
-    def __repr__(self):
-        return f'<EpidemicRecord {self.location} on {self.date}>'
-
 
 class SharedDataset(db.Model):
     __tablename__ = 'shared_datasets'
-
+    
     id = db.Column(db.Integer, primary_key=True)
     dataset_id = db.Column(db.Integer, db.ForeignKey('datasets.id'), nullable=False)
     shared_with_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    share_date = db.Column(db.DateTime, default=datetime.utcnow)
+    share_date = db.Column(db.DateTime)
     access_token = db.Column(db.String(255))
     can_download = db.Column(db.Boolean, default=False)
     expires_at = db.Column(db.DateTime)
 
-    def __repr__(self):
-        return f'<SharedDataset {self.dataset_id} shared with {self.shared_with_id}>'
-
 
 class PasswordResetToken(db.Model):
     __tablename__ = 'password_reset_tokens'
-
+    
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    token = db.Column(db.String(255), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    expires_at = db.Column(db.DateTime, nullable=False)
-    used = db.Column(db.Boolean, default=False)
+    token = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime)
+    expires_at = db.Column(db.DateTime)
+
+
+
+class AuditLog(db.Model):
+    __tablename__ = 'audit_logs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    action = db.Column(db.String(100), nullable=False)  
+    target_type = db.Column(db.String(50))              
+    target_id = db.Column(db.Integer)                   
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    details = db.Column(db.Text)  
 
     def __repr__(self):
-        return f'<PasswordResetToken for user {self.user_id}>'
+        return f'<AuditLog {self.action} by User {self.user_id} at {self.timestamp}>'

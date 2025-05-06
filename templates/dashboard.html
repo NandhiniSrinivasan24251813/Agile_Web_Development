@@ -1,100 +1,169 @@
-{% extends 'base.html' %}
-{% block title %}Dashboard - Epidemic Monitoring{% endblock %}
-
-{% block content %}
-<div>
-  <h1 class="h2 mb-4">Your Dashboard</h1>
-
-  <div class="row g-4 mb-4">
-    <div class="col-md-6">
-      <div class="card shadow-sm h-100">
-        <div class="card-header bg-white">
-          <h2 class="h5 mb-0 d-flex align-items-center">
-            <i class="bi bi-database me-2 text-primary"></i>
-            Your Datasets
-          </h2>
-        </div>
-        <div class="card-body">
-          {% if datasets %}
-            <div class="d-flex flex-column gap-3">
-              {% for dataset in datasets %}
-                <div class="card dashboard-card">
-                  <div class="card-body">
-                    <h3 class="h6 mb-1">{{ dataset.name }}</h3>
-                    <p class="text-muted small mb-2">
-                      Uploaded on {{ dataset.upload_date.strftime('%B %d, %Y') }}
-                    </p>
-                    <p class="small mb-3">
-                      {{ dataset.description or 'No description' }}
-                    </p>
-                    <div class="d-flex gap-2">
-                      <a href="{{ url_for('visualize', dataset_id=dataset.id) }}" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-bar-chart me-1"></i>Visualize
-                      </a>
-                      <a href="{{ url_for('share', dataset_id=dataset.id) }}" class="btn btn-sm btn-outline-success">
-                        <i class="bi bi-share me-1"></i>Share
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              {% endfor %}
-            </div>
-          {% else %}
-            <div class="text-center py-5">
-              <p class="text-muted mb-4">You haven't uploaded any datasets yet.</p>
-              <a href="{{ url_for('upload') }}" class="btn btn-primary">
-                <i class="bi bi-cloud-upload me-2"></i>Upload New Dataset
-              </a>
-            </div>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-
-    <div class="col-md-6">
-      <div class="card shadow-sm h-100">
-        <div class="card-header bg-white">
-          <h2 class="h5 mb-0 d-flex align-items-center">
-            <i class="bi bi-share me-2 text-success"></i>
-            Shared With You
-          </h2>
-        </div>
-        <div class="card-body">
-          {% if shared_datasets %}
-            <div class="d-flex flex-column gap-3">
-              {% for shared in shared_datasets %}
-                <div class="card dashboard-card">
-                  <div class="card-body">
-                    <h3 class="h6 mb-1">{{ shared.dataset.name }}</h3>
-                    <p class="text-muted small mb-2">
-                      Shared by {{ shared.dataset.owner.username }} on {{ shared.share_date.strftime('%B %d, %Y') }}
-                    </p>
-                    <p class="small mb-3">
-                      {{ shared.dataset.description or 'No description' }}
-                    </p>
-                    <div>
-                      <a href="{{ url_for('visualize', dataset_id=shared.dataset_id) }}" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-bar-chart me-1"></i>Visualize
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              {% endfor %}
-            </div>
-          {% else %}
-            <div class="text-center py-5">
-              <p class="text-muted">No datasets have been shared with you yet.</p>
-            </div>
-          {% endif %}
-        </div>
+{% extends 'base.html' %} {% block title %}Dashboard - Epidemic Monitoring
+System{% endblock %} {% block content %}
+<div class="container py-4 fade-in">
+  <div class="row mb-4">
+    <div class="col">
+      <div class="d-flex justify-content-between align-items-center">
+        <h1 class="h2 mb-0 fade-in-up">Your Datasets</h1>
+        <a
+          href="{{ url_for('upload') }}"
+          class="btn btn-primary slide-in-right"
+        >
+          <i class="fas fa-upload me-2"></i>Upload Dataset
+        </a>
       </div>
     </div>
   </div>
 
-  <div class="text-center">
-    <a href="{{ url_for('upload') }}" class="btn btn-primary btn-lg">
-      <i class="bi bi-cloud-upload me-2"></i>Upload New Dataset
-    </a>
+  {% if current_user.datasets %}
+  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    {% for dataset in current_user.datasets %}
+    <div
+      class="col card-animate"
+      style="animation-delay: {{ loop.index0 * 0.1 }}s"
+    >
+      <div class="card h-100 shadow-sm hover-shadow">
+        <div class="card-body">
+          <h5 class="card-title text-truncate mb-1">{{ dataset.name }}</h5>
+          <p class="text-muted small mb-2">
+            <i class="fas fa-table me-1"></i>{{
+            dataset.record_count|default('N/A', true) }} records
+          </p>
+
+          <p class="text-muted small mb-3">
+            <i class="fas fa-calendar me-1"></i>Uploaded: {{
+            dataset.upload_date.strftime('%d %b %Y') }}
+          </p>
+
+          {% if dataset.description %}
+          <p class="card-text small">{{ dataset.description|truncate(100) }}</p>
+          {% endif %}
+        </div>
+        <div class="card-footer bg-transparent border-top-0 d-flex">
+          <a
+            href="{{ url_for('visualize', dataset_id=dataset.id) }}"
+            class="btn btn-sm btn-outline-primary flex-grow-1 me-1"
+          >
+            <i class="fas fa-chart-bar me-1"></i>Visualize
+          </a>
+          <a
+            href="{{ url_for('export_dataset', dataset_id=dataset.id) }}"
+            class="btn btn-sm btn-outline-secondary flex-grow-1 me-1"
+          >
+            <i class="fas fa-download me-1"></i>Export
+          </a>
+          <form
+            action="{{ url_for('delete_dataset', dataset_id=dataset.id) }}"
+            method="POST"
+            class="flex-grow-1"
+          >
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button
+              type="submit"
+              class="btn btn-sm btn-outline-danger w-100"
+              onclick="return confirm('Are you sure you want to delete this dataset?');"
+            >
+              <i class="fas fa-trash me-1"></i>Delete
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
   </div>
+  {% else %}
+  <div class="row justify-content-center mt-5 fade-in-up">
+    <div class="col-md-8 col-lg-6">
+      <div class="card shadow-sm text-center py-5">
+        <div class="card-body">
+          <div class="mb-4">
+            <i class="fas fa-table fa-3x text-muted"></i>
+          </div>
+          <h4>No Datasets Yet</h4>
+          <p class="text-muted">
+            Upload your first dataset to begin exploring and visualizing
+            epidemiological data.
+          </p>
+          <a href="{{ url_for('upload') }}" class="btn btn-primary mt-3">
+            <i class="fas fa-upload me-2"></i>Upload Dataset
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %} {% if shared_datasets %}
+  <div class="row mt-5 mb-4">
+    <div class="col">
+      <h2 class="h3 fade-in-up" style="animation-delay: 0.3s">
+        Shared With You
+      </h2>
+    </div>
+  </div>
+
+  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    {% for dataset in shared_datasets %}
+    <div
+      class="col card-animate"
+      style="animation-delay: {{ (loop.index0 * 0.1) + 0.5 }}s"
+    >
+      <div class="card h-100 shadow-sm hover-shadow">
+        <!-- Similar content to the user's datasets but with owner info -->
+        <div class="card-body">
+          <div class="d-flex justify-content-between">
+            <h5 class="card-title text-truncate mb-1">{{ dataset.name }}</h5>
+            <span class="badge bg-info">Shared</span>
+          </div>
+          <p class="text-muted small mb-2">
+            <i class="fas fa-user me-1"></i>From: {{ dataset.owner.username }}
+          </p>
+          <p class="text-muted small mb-2">
+            <i class="fas fa-table me-1"></i>{{
+            dataset.record_count|default('N/A', true) }} records
+          </p>
+          <p class="text-muted small mb-3">
+            <i class="fas fa-calendar me-1"></i>Shared: {{
+            dataset.upload_date.strftime('%d %b %Y') }}
+          </p>
+
+          {% if dataset.description %}
+          <p class="card-text small">{{ dataset.description|truncate(100) }}</p>
+          {% endif %}
+        </div>
+        <div class="card-footer bg-transparent border-top-0">
+          <a
+            href="{{ url_for('visualize', dataset_id=dataset.id) }}"
+            class="btn btn-sm btn-outline-primary w-100"
+          >
+            <i class="fas fa-chart-bar me-1"></i>View & Visualize
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
 </div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Add animation delay to cards
+    document.querySelectorAll(".card-animate").forEach((card, index) => {
+      card.style.animationDelay = `${index * 0.1}s`;
+    });
+
+    // Add hover effect to cards
+    document.querySelectorAll(".hover-shadow").forEach((card) => {
+      card.addEventListener("mouseenter", function () {
+        this.classList.add("shadow");
+        this.style.transform = "translateY(-5px)";
+        this.style.transition = "transform 0.3s ease, box-shadow 0.3s ease";
+      });
+
+      card.addEventListener("mouseleave", function () {
+        this.classList.remove("shadow");
+        this.style.transform = "translateY(0)";
+      });
+    });
+  });
+</script>
 {% endblock %}

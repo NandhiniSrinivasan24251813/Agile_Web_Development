@@ -1,85 +1,74 @@
 {% extends 'base.html' %}
-{% block title %}Profile - Epidemic Monitoring{% endblock %}
+
+{% block title %}My Profile{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-lg-4 mb-4">
-        <div class="card shadow-sm">
-            <div class="card-body text-center p-4">
-                <div class="mb-4">
-                    <div class="d-inline-flex justify-content-center align-items-center bg-primary text-white rounded-circle" style="width: 100px; height: 100px;">
-                        <i class="bi bi-person-fill" style="font-size: 3rem;"></i>
-                    </div>
-                </div>
-                <h2 class="card-title">{{ current_user.username }}</h2>
-                <p class="text-muted">{{ current_user.email }}</p>
-                <p class="text-muted small">
-                    <i class="bi bi-calendar me-1"></i>
-                    Member since {{ current_user.created_at.strftime('%B %d, %Y') }}
-                </p>
-            </div>
+<div class="container mt-5">
+  <div class="row">
+    <!-- Profile Card -->
+    <div class="col-md-4 d-flex">
+      <div class="card text-center flex-fill">
+        <div class="card-body">
+          <img
+            src="{{ url_for('static', filename='uploads/' + (user.profile_picture or 'default.png')) }}"
+            class="rounded-circle mb-3"
+            width="150"
+            height="150"
+            alt="Profile Picture"
+          >
+          <h4 class="card-title">{{ user.full_name or user.username }}</h4>
+          <p class="text-muted mb-1">{{ user.email }}</p>
+          <p class="text-muted small">{{ user.work_location or 'No Work location set' }}</p>
+          <a href="{{ url_for('edit_profile') }}" class="btn btn-primary btn-sm mt-2">
+            <i class="bi bi-pencil-square"></i> Edit Profile
+          </a>
         </div>
+      </div>
     </div>
-    
-    <div class="col-lg-8">
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-white">
-                <h3 class="card-title mb-0">Profile Information</h3>
-            </div>
-            <div class="card-body p-4">
-                <form method="POST" action="{{ url_for('profile') }}">
-                    <div class="mb-3">
-                        <label for="username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="username" name="username" value="{{ current_user.username }}" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email Address</label>
-                        <input type="email" class="form-control" id="email" name="email" value="{{ current_user.email }}" required>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <label for="bio" class="form-label">Bio</label>
-                        <textarea class="form-control" id="bio" name="bio" rows="3">{{ current_user.bio if current_user.bio else '' }}</textarea>
-                        <div class="form-text">Share a brief description about yourself or your organization.</div>
-                    </div>
-                    
-                    <div class="text-end">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-save me-1"></i> Save Changes
-                        </button>
-                    </div>
-                </form>
-            </div>
+
+    <!-- General Info Card -->
+    <div class="col-md-8 d-flex">
+      <div class="card flex-fill">
+        <div class="card-header">
+          <h5>General Information</h5>
         </div>
-        
-        <div class="card shadow-sm">
-            <div class="card-header bg-white">
-                <h3 class="card-title mb-0">Account Statistics</h3>
-            </div>
-            <div class="card-body p-4">
-                <div class="row text-center">
-                    <div class="col-md-4 mb-3 mb-md-0">
-                        <div class="p-3 border rounded">
-                            <h4 class="h2 mb-0">{{ datasets|length if datasets else 0 }}</h4>
-                            <p class="text-muted mb-0">Datasets</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4 mb-3 mb-md-0">
-                        <div class="p-3 border rounded">
-                            <h4 class="h2 mb-0">{{ shared_with|length if shared_with else 0 }}</h4>
-                            <p class="text-muted mb-0">Shared With Others</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="p-3 border rounded">
-                            <h4 class="h2 mb-0">{{ shared_to_me|length if shared_to_me else 0 }}</h4>
-                            <p class="text-muted mb-0">Shared With You</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="card-body">
+          <dl class="row mb-0">
+            <dt class="col-sm-4">Full Name</dt>
+            <dd class="col-sm-8">{{ user.full_name or 'N/A' }}</dd>
+
+            <dt class="col-sm-4">Date of Birth</dt>
+            <dd class="col-sm-8">{{ user.dob.strftime('%d/%m/%Y') if user.dob else 'N/A' }}</dd>
+
+            <dt class="col-sm-4">Mobile</dt>
+            <dd class="col-sm-8">{{ user.mobile or 'N/A' }}</dd>
+
+            <dt class="col-sm-4">Address</dt>
+            <dd class="col-sm-8">{{ user.address or 'N/A' }}</dd>
+
+            <dt class="col-sm-4">City</dt>
+            <dd class="col-sm-8">{{ user.city or 'N/A' }}</dd>
+
+            <dt class="col-sm-4">Postcode</dt>
+            <dd class="col-sm-8">{{ user.postcode or 'N/A' }}</dd>
+          </dl>
         </div>
+      </div>
     </div>
+  </div>
+
+  <!-- About Me Card -->
+  <div class="row mt-4">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header">
+          <h5>About Me</h5>
+        </div>
+        <div class="card-body">
+          <p class="mb-0">{{ user.bio or 'N/A' }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

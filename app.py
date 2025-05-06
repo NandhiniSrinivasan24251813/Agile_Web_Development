@@ -1,822 +1,835 @@
-from flask import Flask, render_template, flash, redirect, url_for, request, jsonify, abort
-from flask_login import LoginManager, current_user, login_user, logout_user, login_required
-from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Flask, render_template, redirect, send_file, url_for, flash, request
+from flask_login import LoginManager, current_user, login_required, login_user, logout_user
+from models import db, User, AuditLog
+from flask_wtf.csrf import CSRFProtect
+from datetime import datetime
+from flask_migrate import Migrate
+
+from models import db, User, AuditLog, PasswordResetToken, Dataset, EpidemicRecord, SharedDataset
+import secrets
+from forms import EditProfileForm
 from werkzeug.utils import secure_filename
-from models import db, User, Dataset, EpidemicRecord, SharedDataset, PasswordResetToken
-from datetime import datetime, timedelta
 import os
-import uuid
-import json
-import csv
 import pandas as pd
-import logging
+import numpy as np
+import json
+import io
+from tqdm import tqdm
+import threading
+from queue import Queue
+import time
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 
+# Initialization
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your-secret-key-change-this'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///epidemic.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 'dev'
-app.config['UPLOAD_FOLDER'] = 'uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
+app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
+app.config['DATA_FOLDER'] = os.path.join('static', 'data')
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['BATCH_SIZE'] = 1000  # Number of records to process in each batch
+app.config['MAX_WORKERS'] = 4    # Maximum number of worker threads
+app.config['CHUNK_SIZE'] = 1024 * 1024  # 1MB chunks for file reading
+
+# folders setup
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(app.config['DATA_FOLDER'], exist_ok=True)
+
 db.init_app(app)
+migrate = Migrate(app, db)
+csrf = CSRFProtect(app)
 
-# Create uploads directory if it doesn't exist
-if not os.path.exists(app.config['UPLOAD_FOLDER']):
-    os.makedirs(app.config['UPLOAD_FOLDER'])
-
-# Initialize Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
-login_manager.login_message = 'Please log in to access this page.'
-login_manager.login_message_category = 'info'
-
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-
+# --------------------------------------------
 # Routes
-@app.route("/")
+# --------------------------------------------
+
+@app.route('/')
 def index():
-    return render_template("home.html")
+    return render_template('index.html')
 
-
-@app.route("/login", methods=['GET', 'POST'])
-def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
-
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-
-        if not username or not password:
-            flash('Username and password are required', 'error')
-            return render_template("auth/login.html")
-
-        user = User.query.filter_by(username=username).first()
-
-        if user and user.check_password(password):
-            login_user(user, remember=True)
-            user.last_login = datetime.utcnow()
-            db.session.commit()
-
-            flash('Login successful!', 'success')
-            next_page = request.args.get('next')
-            # Make sure the next page is on our site to prevent open redirect
-            if next_page and not next_page.startswith('/'):
-                next_page = None
-            return redirect(next_page or url_for('dashboard'))
-        else:
-            flash('Invalid username or password', 'error')
-
-    return render_template("auth/login.html")
-
-
-@app.route("/signup", methods=['GET', 'POST'])
+@app.route('/signup', methods=['GET', 'POST'])
 def signup():
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
-
     if request.method == 'POST':
         username = request.form.get('username')
         email = request.form.get('email')
         password = request.form.get('password')
-
-        if not username or not email or not password:
-            flash('All fields are required', 'error')
-            return render_template("auth/signup.html")
-
-        if len(password) < 8:
-            flash('Password must be at least 8 characters long', 'error')
-            return render_template("auth/signup.html")
+        confirm_password = request.form.get('confirm_password')
 
         # Check if username or email already exists
         if User.query.filter_by(username=username).first():
             flash('Username already exists', 'error')
-            return render_template("auth/signup.html")
+            return render_template('signup.html')
 
         if User.query.filter_by(email=email).first():
-            flash('Email already registered', 'error')
-            return render_template("auth/signup.html")
+            flash('Email already exists', 'error')
+            return render_template('signup.html')
 
         # Create new user
-        try:
-            user = User(username=username, email=email)
-            user.set_password(password)
+        new_user = User(username=username, email=email)
+        new_user.set_password(password)
 
-            db.session.add(user)
+        try:
+            db.session.add(new_user)
             db.session.commit()
 
-            flash('Account created successfully! You can now login.', 'success')
+            # Insert into AuditLog
+            audit = AuditLog(
+                user_id=new_user.id,
+                action="signup",
+                target_type="User",
+                target_id=new_user.id,
+                details=f"User {new_user.username} signed up"
+            )
+            db.session.add(audit)
+            db.session.commit()
+
+            flash('Account created successfully! You can now log in.', 'success')
             return redirect(url_for('login'))
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error creating user: {str(e)}")
             flash('An error occurred. Please try again.', 'error')
+            print(f"Error during signup: {str(e)}")
 
-    return render_template("auth/signup.html")
+    return render_template('signup.html')
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        remember = 'remember_me' in request.form
 
-@app.route("/logout")
+        user = User.query.filter_by(username=username).first()
+
+        if user and user.check_password(password):
+            login_user(user, remember=remember)
+
+            # Update last login time
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+
+            # Insert into AuditLog
+            audit = AuditLog(
+                user_id=user.id,
+                action="login",
+                target_type="User",
+                target_id=user.id,
+                details=f"User {user.username} logged in"
+            )
+            db.session.add(audit)
+            db.session.commit()
+
+            flash('Logged in successfully!', 'success')
+            next_page = request.args.get('next')
+            if next_page:
+                return redirect(next_page)
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Invalid username or password', 'error')
+
+    return render_template('login.html')
+
+@app.route('/logout')
 @login_required
 def logout():
     logout_user()
-    flash('You have been logged out successfully.', 'success')
+    flash('You have been logged out', 'info')
     return redirect(url_for('index'))
 
 
-@app.route("/dashboard")
-@login_required
-def dashboard():
-    try:
-        # Get user's datasets
-        datasets = Dataset.query.filter_by(user_id=current_user.id).all()
 
-        # Get datasets shared with the user with owner information
-        shared_datasets = SharedDataset.query.filter_by(shared_with_id=current_user.id).all()
-
-        return render_template("dashboard.html", datasets=datasets, shared_datasets=shared_datasets)
-    except Exception as e:
-        logger.error(f"Error in dashboard: {str(e)}")
-        flash('An error occurred while loading the dashboard.', 'error')
-        return redirect(url_for('index'))
-
-
-@app.route("/upload", methods=['GET', 'POST'])
-@login_required
-def upload():
+#Forgot Password
+@app.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
     if request.method == 'POST':
-        name = request.form.get('name')
-        description = request.form.get('description')
-        file = request.files.get('file')
+        email = request.form.get('email')
 
-        if not name or not file:
-            flash('Dataset name and file are required', 'error')
-            return render_template("upload.html")
+        # Find user by email
+        user = User.query.filter_by(email=email).first()
 
-        # Validate file type
-        if not (file.filename.endswith('.csv') or file.filename.endswith('.json')):
-            flash('Only CSV and JSON files are supported', 'error')
-            return render_template("upload.html")
+        if user:
+            # If user exists, generate reset token
+            token = secrets.token_hex(32)
 
-        try:
-            # Save the file
-            filename = secure_filename(f"{uuid.uuid4()}_{file.filename}")
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
-
-            # Create dataset record
-            dataset = Dataset(
-                name=name,
-                description=description,
-                filename=filename,
-                file_type=file.filename.split('.')[-1].lower(),
-                user_id=current_user.id
+            reset_token = PasswordResetToken(
+                user_id=user.id,
+                token=token,
+                created_at=datetime.utcnow(),
+                expires_at=datetime.utcnow()
             )
-
-            # Process the file to extract records
-            record_count = 0
-            min_date = None
-            max_date = None
-
-            if file.filename.endswith('.csv'):
-                with open(file_path, 'r') as f:
-                    reader = csv.DictReader(f)
-                    df = pd.DataFrame(list(reader))
-                    record_count = len(df)
-
-                    # Extract date range if 'date' column exists
-                    if 'date' in df.columns:
-                        df['date'] = pd.to_datetime(df['date'], errors='coerce')
-                        if not df['date'].isnull().all():
-                            min_date = df['date'].min().date() if not pd.isnull(df['date'].min()) else None
-                            max_date = df['date'].max().date() if not pd.isnull(df['date'].max()) else None
-
-            elif file.filename.endswith('.json'):
-                with open(file_path, 'r') as f:
-                    data = json.load(f)
-                    if isinstance(data, list):
-                        record_count = len(data)
-
-                        # Extract date range if 'date' key exists in records
-                        dates = [record.get('date') for record in data if 'date' in record]
-                        if dates:
-                            dates = pd.to_datetime(dates, errors='coerce')
-                            valid_dates = dates[~pd.isnull(dates)]
-                            if len(valid_dates) > 0:
-                                min_date = min(valid_dates).date()
-                                max_date = max(valid_dates).date()
-
-            # Update dataset with extracted info
-            dataset.record_count = record_count
-            dataset.date_range_start = min_date
-            dataset.date_range_end = max_date
-
-            db.session.add(dataset)
+            db.session.add(reset_token)
             db.session.commit()
 
-            flash('Dataset uploaded successfully!', 'success')
-            return redirect(url_for('dashboard'))
-        except Exception as e:
-            db.session.rollback()
-            try:
-                # Clean up the file if it was saved
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-            except:
-                pass
+            # Generate reset link
+            reset_link = url_for('reset_password', token=token, _external=True)
+            flash(f'Password reset link: {reset_link}', 'info')
 
-            logger.error(f"Error uploading file: {str(e)}")
-            flash(f'Error processing file: {str(e)}', 'error')
-
-    return render_template("upload.html")
-
-
-@app.route("/visualize/<int:dataset_id>")
-@login_required
-def visualize(dataset_id):
-    try:
-        # Get the dataset
-        dataset = Dataset.query.get_or_404(dataset_id)
-
-        # Check if user owns the dataset or it's shared with them
-        is_owner = dataset.user_id == current_user.id
-        is_shared = SharedDataset.query.filter_by(
-            dataset_id=dataset_id,
-            shared_with_id=current_user.id
-        ).first() is not None
-
-        if not (is_owner or is_shared):
-            flash('You do not have permission to view this dataset', 'error')
-            return redirect(url_for('dashboard'))
-
-        return render_template("visualize.html", dataset=dataset)
-    except Exception as e:
-        logger.error(f"Error in visualize: {str(e)}")
-        flash('Error loading visualization. The dataset might be invalid.', 'error')
-        return redirect(url_for('dashboard'))
-
-
-@app.route("/share/<int:dataset_id>", methods=['GET', 'POST'])
-@login_required
-def share(dataset_id):
-    try:
-        # Get the dataset
-        dataset = Dataset.query.get_or_404(dataset_id)
-
-        # Check if user owns the dataset
-        if dataset.user_id != current_user.id:
-            flash('You do not have permission to share this dataset', 'error')
-            return redirect(url_for('dashboard'))
-
-        if request.method == 'POST':
-            username = request.form.get('username')
-
-            if not username:
-                flash('Username is required', 'error')
-                return redirect(url_for('share', dataset_id=dataset_id))
-
-            # Find the user to share with
-            user = User.query.filter_by(username=username).first()
-
-            if not user:
-                flash(f'User {username} not found', 'error')
-                return redirect(url_for('share', dataset_id=dataset_id))
-
-            # Don't share with yourself
-            if user.id == current_user.id:
-                flash('You cannot share a dataset with yourself', 'error')
-                return redirect(url_for('share', dataset_id=dataset_id))
-
-            # Check if already shared
-            existing_share = SharedDataset.query.filter_by(
-                dataset_id=dataset_id,
-                shared_with_id=user.id
-            ).first()
-
-            if existing_share:
-                flash(f'Dataset already shared with {username}', 'warning')
-                return redirect(url_for('share', dataset_id=dataset_id))
-
-            # Create shared dataset record
-            shared = SharedDataset(
-                dataset_id=dataset_id,
-                shared_with_id=user.id,
-                share_date=datetime.utcnow(),
-                access_token=str(uuid.uuid4()),
-                can_download=True,
-                expires_at=datetime.utcnow() + timedelta(days=30)  # 30-day expiration
+            # Audit Log
+            audit = AuditLog(
+                user_id=user.id,
+                action="forgot_password",
+                target_type="User",
+                target_id=user.id,
+                details="Password reset requested"
             )
-
-            db.session.add(shared)
+            db.session.add(audit)
             db.session.commit()
 
-            flash(f'Dataset shared with {username} successfully!', 'success')
-            return redirect(url_for('share', dataset_id=dataset_id))
+            return redirect(url_for('forgot_password'))
+        else:
+            # If email not found
+            flash('Email address not found. Please check and try again.', 'error')
+            return redirect(url_for('forgot_password'))
 
-        # Get users this dataset is shared with
-        shared_users = SharedDataset.query.filter_by(dataset_id=dataset_id).all()
-
-        return render_template("share.html", dataset=dataset, shared_users=shared_users)
-    except Exception as e:
-        logger.error(f"Error in share: {str(e)}")
-        flash('An error occurred while processing your request.', 'error')
-        return redirect(url_for('dashboard'))
+    return render_template('forgot_password.html')
 
 
-@app.route("/revoke_share/<int:share_id>")
-@login_required
-def revoke_share(share_id):
-    try:
-        # Get the shared dataset record
-        shared = SharedDataset.query.get_or_404(share_id)
+## Reset Password
+@app.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    reset_token = PasswordResetToken.query.filter_by(token=token).first()
 
-        # Get the dataset
-        dataset = Dataset.query.get_or_404(shared.dataset_id)
+    if not reset_token:
+        flash('Invalid or expired token', 'error')
+        return redirect(url_for('login'))
 
-        # Check if user owns the dataset
-        if dataset.user_id != current_user.id:
-            flash('You do not have permission to revoke access to this dataset', 'error')
-            return redirect(url_for('dashboard'))
+    user = User.query.get(reset_token.user_id)
 
-        # Delete the shared record
-        db.session.delete(shared)
+    if request.method == 'POST':
+        new_password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+
+        if new_password != confirm_password:
+            flash('Passwords do not match', 'error')
+            return render_template('reset_password.html', token=token)
+
+        # Update user's password
+        user.set_password(new_password)
+        db.session.delete(reset_token)  # remove used token
         db.session.commit()
 
-        flash('Dataset access revoked successfully', 'success')
-        return redirect(url_for('share', dataset_id=dataset.id))
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"Error in revoke_share: {str(e)}")
-        flash('An error occurred while revoking access.', 'error')
-        return redirect(url_for('dashboard'))
+        # Audit Log
+        audit = AuditLog(
+            user_id=user.id,
+            action="reset_password",
+            target_type="User",
+            target_id=user.id,
+            details="Password reset successfully"
+        )
+        db.session.add(audit)
+        db.session.commit()
+
+        flash('Password reset successful.', 'success')
+        return redirect(url_for('reset_success'))
 
 
-@app.route("/profile", methods=['GET', 'POST'])
+    return render_template('reset_password.html', token=token)
+
+@app.route('/reset_success')
+def reset_success():
+    return render_template('reset_success.html')
+
+
+# Profile
+@app.route('/profile')
 @login_required
 def profile():
-    try:
-        if request.method == 'POST':
-            username = request.form.get('username')
-            email = request.form.get('email')
-            bio = request.form.get('bio')
-
-            if not username or not email:
-                flash('Username and email are required', 'error')
-                return redirect(url_for('profile'))
-
-            # Check if username already exists (for another user)
-            existing_user = User.query.filter(User.username == username, User.id != current_user.id).first()
-            if existing_user:
-                flash('Username already exists', 'error')
-                return redirect(url_for('profile'))
-
-            # Check if email already exists (for another user)
-            existing_email = User.query.filter(User.email == email, User.id != current_user.id).first()
-            if existing_email:
-                flash('Email already registered', 'error')
-                return redirect(url_for('profile'))
-
-            # Update user profile
-            current_user.username = username
-            current_user.email = email
-            if bio:
-                current_user.bio = bio
-
-            db.session.commit()
-            flash('Profile updated successfully', 'success')
-            return redirect(url_for('profile'))
-
-        # Get user's datasets and sharing info for statistics
-        datasets = Dataset.query.filter_by(user_id=current_user.id).all()
-        shared_with = SharedDataset.query.join(Dataset).filter(Dataset.user_id == current_user.id).all()
-        shared_to_me = SharedDataset.query.filter_by(shared_with_id=current_user.id).all()
-
-        return render_template("profile.html", datasets=datasets, shared_with=shared_with, shared_to_me=shared_to_me)
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"Error in profile: {str(e)}")
-        flash('An error occurred while updating your profile.', 'error')
-        return redirect(url_for('dashboard'))
+    return render_template('profile.html', user=current_user)
 
 
-@app.route("/settings")
+@app.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
-    return render_template("settings.html")
-
-
-# Settings form handlers
-@app.route("/settings/account", methods=['POST'])
-@login_required
-def settings_account():
-    try:
-        if request.method == 'POST':
-            username = request.form.get('username')
-            email = request.form.get('email')
-            timezone = request.form.get('timezone')
-
-            if not username or not email:
-                flash('Username and email are required', 'error')
-                return redirect(url_for('settings'))
-
-            # Check if username already exists (for another user)
-            existing_user = User.query.filter(User.username == username, User.id != current_user.id).first()
-            if existing_user:
-                flash('Username already exists', 'error')
-                return redirect(url_for('settings'))
-
-            # Check if email already exists (for another user)
-            existing_email = User.query.filter(User.email == email, User.id != current_user.id).first()
-            if existing_email:
-                flash('Email already registered', 'error')
-                return redirect(url_for('settings'))
-
-            # Update user account settings
-            current_user.username = username
-            current_user.email = email
-            # Store timezone if your User model has this field
-
+    if request.method == 'POST':
+        form_type = request.form.get('form_type')
+        
+        if form_type == 'account':
+            # Update account settings
+            current_user.email = request.form.get('email')
+            current_user.timezone = request.form.get('timezone')
             db.session.commit()
-            flash('Account settings updated successfully', 'success')
-        return redirect(url_for('settings'))
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"Error in settings_account: {str(e)}")
-        flash('An error occurred while updating your settings.', 'error')
-        return redirect(url_for('settings'))
-
-
-@app.route("/settings/password", methods=['POST'])
-@login_required
-def settings_password():
-    try:
-        if request.method == 'POST':
+            
+            # Log the update
+            audit = AuditLog(
+                user_id=current_user.id,
+                action="update_account",
+                target_type="User",
+                target_id=current_user.id,
+                details="Updated account settings"
+            )
+            db.session.add(audit)
+            db.session.commit()
+            
+            flash('Account settings updated successfully!', 'success')
+            
+        elif form_type == 'security':
+            # Update security settings
             current_password = request.form.get('current_password')
             new_password = request.form.get('new_password')
             confirm_password = request.form.get('confirm_password')
-
-            if not current_password or not new_password or not confirm_password:
-                flash('All password fields are required', 'error')
-                return redirect(url_for('settings'))
-
+            enable_2fa = request.form.get('enable_2fa') == '1'
+            
             # Verify current password
             if not current_user.check_password(current_password):
-                flash('Current password is incorrect', 'error')
+                flash('Current password is incorrect.', 'error')
                 return redirect(url_for('settings'))
-
-            # Check if new passwords match
-            if new_password != confirm_password:
-                flash('New passwords do not match', 'error')
-                return redirect(url_for('settings'))
-
-            # Check new password length
-            if len(new_password) < 8:
-                flash('New password must be at least 8 characters long', 'error')
-                return redirect(url_for('settings'))
-
-            # Update password
-            current_user.set_password(new_password)
+            
+            # Update password if provided
+            if new_password:
+                if new_password != confirm_password:
+                    flash('New passwords do not match.', 'error')
+                    return redirect(url_for('settings'))
+                
+                current_user.set_password(new_password)
+                
+                # Log the update
+                audit = AuditLog(
+                    user_id=current_user.id,
+                    action="password_change",
+                    target_type="User",
+                    target_id=current_user.id,
+                    details="Password changed"
+                )
+                db.session.add(audit)
+            
+            # Update 2FA settings
+            current_user.two_factor_enabled = enable_2fa
             db.session.commit()
-
-            flash('Password updated successfully', 'success')
-        return redirect(url_for('settings'))
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"Error in settings_password: {str(e)}")
-        flash('An error occurred while updating your password.', 'error')
-        return redirect(url_for('settings'))
-
-
-@app.route("/settings/notifications", methods=['POST'])
-@login_required
-def settings_notifications():
-    try:
-        if request.method == 'POST':
-            # Get notification preferences
-            email_notifications = 'email_notifications' in request.form
-            shared_dataset_notifications = 'shared_dataset_notifications' in request.form
-            data_update_notifications = 'data_update_notifications' in request.form
-
-            # Store preferences if your User model has these fields
-            # current_user.email_notifications = email_notifications
-            # current_user.shared_dataset_notifications = shared_dataset_notifications
-            # current_user.data_update_notifications = data_update_notifications
-
-            # db.session.commit()
-            flash('Notification preferences updated successfully', 'success')
-        return redirect(url_for('settings'))
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"Error in settings_notifications: {str(e)}")
-        flash('An error occurred while updating notification settings.', 'error')
-        return redirect(url_for('settings'))
-
-
-@app.route("/settings/data_preferences", methods=['POST'])
-@login_required
-def settings_data_preferences():
-    try:
-        if request.method == 'POST':
-            # Get data display preferences
-            default_chart_type = request.form.get('default_chart_type')
-            default_map_view = request.form.get('default_map_view')
-            date_format = request.form.get('date_format')
-
-            # Store preferences if your User model has these fields
-            # current_user.default_chart_type = default_chart_type
-            # current_user.default_map_view = default_map_view
-            # current_user.date_format = date_format
-
-            # db.session.commit()
-            flash('Data display preferences updated successfully', 'success')
-        return redirect(url_for('settings'))
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"Error in settings_data_preferences: {str(e)}")
-        flash('An error occurred while updating data preferences.', 'error')
-        return redirect(url_for('settings'))
-
-
-@app.route("/delete_all_datasets", methods=['POST'])
-@login_required
-def delete_all_datasets():
-    try:
-        if request.method == 'POST':
-            confirmation = request.form.get('confirmation')
-
-            if confirmation != 'DELETE':
-                flash('Confirmation text does not match', 'error')
+            
+            flash('Security settings updated successfully!', 'success')
+            
+        elif form_type == 'notifications':
+            # Update notification settings
+            # In a real app, you would save these to the user model
+            flash('Notification preferences saved!', 'success')
+            
+        elif form_type == 'data_retention':
+            # Update data retention settings
+            flash('Data retention policy updated!', 'success')
+            
+        elif form_type == 'delete_data':
+            # Delete all user data
+            confirmation = request.form.get('confirm_delete_data')
+            
+            if confirmation != 'DELETE ALL MY DATA':
+                flash('Invalid confirmation text.', 'error')
                 return redirect(url_for('settings'))
-
-            # Get all user's datasets
+            
+            # Delete all datasets
             datasets = Dataset.query.filter_by(user_id=current_user.id).all()
-
-            # Delete datasets and associated records
             for dataset in datasets:
-                # Remove the file
-                try:
-                    file_path = os.path.join(app.config['UPLOAD_FOLDER'], dataset.filename)
-                    if os.path.exists(file_path):
-                        os.remove(file_path)
-                except Exception as e:
-                    logger.error(f"Error removing file: {str(e)}")
-                    flash(f'Error removing file: {str(e)}', 'error')
-
-                # The cascade delete will handle associated records
+                # Delete records
+                EpidemicRecord.query.filter_by(dataset_id=dataset.id).delete()
+                # Delete dataset
                 db.session.delete(dataset)
-
+            
             db.session.commit()
-
-            flash('All datasets deleted successfully', 'success')
-        return redirect(url_for('settings'))
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"Error in delete_all_datasets: {str(e)}")
-        flash('An error occurred while deleting datasets.', 'error')
-        return redirect(url_for('settings'))
-
-
-@app.route("/delete_account", methods=['POST'])
-@login_required
-def delete_account():
-    try:
-        if request.method == 'POST':
-            password = request.form.get('password')
-
-            if not password:
-                flash('Password is required to confirm account deletion', 'error')
-                return redirect(url_for('settings'))
-
-            # Verify password
-            if not current_user.check_password(password):
-                flash('Password is incorrect', 'error')
-                return redirect(url_for('settings'))
-
-            # Delete all user's datasets
-            datasets = Dataset.query.filter_by(user_id=current_user.id).all()
-
-            for dataset in datasets:
-                # Remove the file
-                try:
-                    file_path = os.path.join(app.config['UPLOAD_FOLDER'], dataset.filename)
-                    if os.path.exists(file_path):
-                        os.remove(file_path)
-                except Exception as e:
-                    logger.error(f"Error removing file: {str(e)}")
-
-                # The cascade delete will handle associated records
-                db.session.delete(dataset)
-
-            # Delete the user
-            user_id = current_user.id
-            logout_user()  # Log out before deleting
-
-            user = User.query.get(user_id)
-            db.session.delete(user)
-            db.session.commit()
-
-            flash('Your account has been deleted successfully', 'success')
-            return redirect(url_for('index'))
-
-        return redirect(url_for('settings'))
-    except Exception as e:
-        db.session.rollback()
-        logger.error(f"Error in delete_account: {str(e)}")
-        flash('An error occurred while deleting your account.', 'error')
-        return redirect(url_for('settings'))
-
-
-# API Endpoints for AJAX requests
-@app.route("/api/dataset/<int:dataset_id>/records")
-@login_required
-def get_dataset_records(dataset_id):
-    try:
-        # Get the dataset
-        dataset = Dataset.query.get_or_404(dataset_id)
-
-        # Check permissions
-        is_owner = dataset.user_id == current_user.id
-        is_shared = SharedDataset.query.filter_by(
-            dataset_id=dataset_id,
-            shared_with_id=current_user.id
-        ).first() is not None
-
-        if not (is_owner or is_shared):
-            return jsonify({'error': 'Permission denied'}), 403
-
-        # Read the file
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], dataset.filename)
-
-        if dataset.file_type == 'csv':
-            df = pd.read_csv(file_path)
-            data = df.to_dict(orient='records')
-        elif dataset.file_type == 'json':
-            with open(file_path, 'r') as f:
-                data = json.load(f)
-        else:
-            return jsonify({'error': 'Unsupported file type'}), 400
-
-        return jsonify(data)
-    except Exception as e:
-        logger.error(f"Error in get_dataset_records: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route("/api/validate-csv", methods=['POST'])
-@login_required
-def validate_csv():
-    try:
-        if 'file' not in request.files:
-            return jsonify({'valid': False, 'message': 'No file provided'}), 400
-
-        file = request.files['file']
-
-        if not file.filename.endswith('.csv'):
-            return jsonify({'valid': False, 'message': 'File must be CSV format'}), 400
-
-        # Save the file temporarily
-        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], f"temp_{secure_filename(file.filename)}")
-        file.save(temp_path)
-
-        try:
-            # Validate the CSV
-            required_fields = ['location', 'latitude', 'longitude', 'date', 'cases']
-
-            with open(temp_path, 'r') as f:
-                reader = csv.DictReader(f)
-                headers = reader.fieldnames
-
-                # Check if required fields exist
-                missing_fields = [field for field in required_fields if field not in headers]
-                if missing_fields:
-                    return jsonify({
-                        'valid': False,
-                        'message': f'Missing required fields: {", ".join(missing_fields)}'
-                    }), 400
-
-                # Read sample data for preview
-                sample_data = []
-                for i, row in enumerate(reader):
-                    if i < 5:  # Just get first 5 rows for preview
-                        sample_data.append(row)
-                    else:
-                        break
-
-            # Return success with preview data
-            return jsonify({
-                'valid': True,
-                'message': 'CSV is valid and contains all required fields.',
-                'columns': headers,
-                'preview': sample_data
-            })
-        finally:
-            # Clean up temp file
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-    except Exception as e:
-        logger.error(f"Error validating CSV: {str(e)}")
-        return jsonify({'valid': False, 'message': f'Error validating file: {str(e)}'}), 500
-
-
-@app.route("/api/generate-share-link/<int:dataset_id>", methods=['POST'])
-@login_required
-def generate_share_link(dataset_id):
-    try:
-        # Get the dataset
-        dataset = Dataset.query.get_or_404(dataset_id)
-
-        # Check if user owns the dataset
-        if dataset.user_id != current_user.id:
-            return jsonify({'success': False, 'message': 'Permission denied'}), 403
-
-        # Generate new token
-        access_token = str(uuid.uuid4())
-
-        # Create or update shared link
-        shared = SharedDataset.query.filter_by(
-            dataset_id=dataset_id,
-            shared_with_id=None  # Public share has no specific user
-        ).first()
-
-        if shared:
-            shared.access_token = access_token
-            shared.expires_at = datetime.utcnow() + timedelta(days=30)
-        else:
-            shared = SharedDataset(
-                dataset_id=dataset_id,
-                shared_with_id=None,  # Public share
-                share_date=datetime.utcnow(),
-                access_token=access_token,
-                can_download=True,
-                expires_at=datetime.utcnow() + timedelta(days=30)
+            
+            # Log the action
+            audit = AuditLog(
+                user_id=current_user.id,
+                action="delete_all_data",
+                target_type="User",
+                target_id=current_user.id,
+                details="User deleted all their data"
             )
-            db.session.add(shared)
+            db.session.add(audit)
+            db.session.commit()
+            
+            flash('All your data has been permanently deleted.', 'success')
+            
+        elif form_type == 'delete_account':
+            # Delete user account
+            confirmation = request.form.get('confirm_delete_account')
+            
+            if not current_user.check_password(confirmation):
+                flash('Incorrect password.', 'error')
+                return redirect(url_for('settings'))
+            
+            # Delete all user data first
+            datasets = Dataset.query.filter_by(user_id=current_user.id).all()
+            for dataset in datasets:
+                # Delete records
+                EpidemicRecord.query.filter_by(dataset_id=dataset.id).delete()
+                # Delete dataset
+                db.session.delete(dataset)
+            
+            # Delete audit logs
+            AuditLog.query.filter_by(user_id=current_user.id).delete()
+            
+            # Store user ID for logging
+            user_id = current_user.id
+            username = current_user.username
+            
+            # Log out the user
+            logout_user()
+            
+            # Delete the user
+            User.query.filter_by(id=user_id).delete()
+            db.session.commit()
+            
+            flash('Your account has been permanently deleted.', 'info')
+            return redirect(url_for('index'))
+    
+    return render_template('settings.html')
+
+@app.route('/help')
+def help():
+    return render_template('help.html')
+
+@app.route('/edit_profile', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    form = EditProfileForm(obj=current_user)
+
+    if form.validate_on_submit():
+        current_user.full_name = form.full_name.data
+        current_user.work_location = form.work_location.data  # renamed from location
+        current_user.bio = form.bio.data
+        current_user.dob = form.dob.data
+        current_user.mobile = form.mobile.data
+        current_user.address = form.address.data
+        current_user.postcode = form.postcode.data
+        current_user.city = form.city.data
+        current_user.last_seen = datetime.utcnow()
+
+        if form.profile_picture.data:
+            picture_file = secure_filename(form.profile_picture.data.filename)
+            picture_path = os.path.join(app.config['UPLOAD_FOLDER'], picture_file)
+            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+            form.profile_picture.data.save(picture_path)
+            current_user.profile_picture = picture_file
 
         db.session.commit()
+        flash('Your profile has been updated.', 'success')
+        return redirect(url_for('profile'))
 
-        # Generate full URL for share link
-        share_link = url_for('view_shared', token=access_token, _external=True)
+    return render_template('edit_profile.html', form=form)
 
-        return jsonify({'success': True, 'link': share_link})
+
+
+
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    # Quickfix 02/05/2025: Get datasets for the current user
+    user_datasets = Dataset.query.filter_by(user_id=current_user.id).order_by(Dataset.upload_date.desc()).all()
+    
+    # Print for debugging
+    print(f"Found {len(user_datasets)} datasets for user {current_user.username}")
+    
+    # Later!
+    shared_datasets = []  # Later!
+    
+    return render_template('dashboard.html', 
+                          user_datasets=user_datasets,
+                          shared_datasets=shared_datasets)
+
+@app.route('/upload', methods=['GET', 'POST'])
+@login_required
+def upload():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash('No file selected', 'error')
+            return redirect(request.url)
+        
+        file = request.files['file']
+        if file.filename == '':
+            flash('No file selected', 'error')
+            return redirect(request.url)
+        
+        if file and allowed_file(file.filename):
+            try:
+                # Save the file temporarily
+                filename = secure_filename(file.filename)
+                temp_path = os.path.join(app.config['UPLOAD_FOLDER'], f'temp_{filename}')
+                file.save(temp_path)
+                
+                # Create dataset record
+                dataset = Dataset(
+                    name=request.form.get('name', filename),
+                    description=request.form.get('description', ''),
+                    filename=filename,
+                    filepath=temp_path,
+                    file_type=file.content_type,
+                    user_id=current_user.id
+                )
+                db.session.add(dataset)
+                db.session.commit()
+                
+                # Process the file based on its type
+                if filename.lower().endswith('.csv'):
+                    # Read CSV in chunks
+                    chunks = pd.read_csv(temp_path, chunksize=app.config['BATCH_SIZE'])
+                    total_records = 0
+                    batch_error = None
+                    
+                    for chunk in chunks:
+                        records = chunk.to_dict('records')
+                        if process_batch(records, dataset.id, current_user.id):
+                            total_records += len(records)
+                        else:
+                            batch_error = "Failed to process CSV data. Check column names match expected format."
+                            raise Exception(batch_error)
+                    
+                elif filename.lower().endswith('.json'):
+                    # Read JSON in chunks
+                    with open(temp_path, 'r') as f:
+                        records = []
+                        batch_error = None
+                        total_records = 0
+                        
+                        for line in f:
+                            if line.strip():
+                                records.append(json.loads(line))
+                                if len(records) >= app.config['BATCH_SIZE']:
+                                    if process_batch(records, dataset.id, current_user.id):
+                                        total_records += len(records)
+                                        records = []
+                                    else:
+                                        batch_error = "Failed to process JSON data. Check data format."
+                                        raise Exception(batch_error)
+                        
+                        # Process remaining records
+                        if records:
+                            if process_batch(records, dataset.id, current_user.id):
+                                total_records += len(records)
+                            else:
+                                batch_error = "Failed to process JSON data. Check data format."
+                                raise Exception(batch_error)
+                
+                # Update dataset with record count
+                dataset.record_count = total_records
+                db.session.commit()
+                
+                flash('Dataset uploaded successfully!', 'success')
+                return redirect(url_for('dashboard'))
+                
+            except Exception as e:
+                db.session.rollback()
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                flash(f'Error processing file: {str(e)}', 'error')
+                return redirect(request.url)
+        else:
+            flash('Invalid file type', 'error')
+            return redirect(request.url)
+    
+    return render_template('upload.html')
+
+@app.route('/visualize/<int:dataset_id>')
+@login_required
+def visualize(dataset_id):
+    dataset = Dataset.query.get_or_404(dataset_id)
+    
+    # Get the records for this dataset
+    records = EpidemicRecord.query.filter_by(dataset_id=dataset_id).all()
+    
+    # Prepare map data
+    map_data = []
+    trend_data = []
+    
+    if records:
+        # Group records by date for trend data
+        date_groups = {}
+        for record in records:
+            if record.latitude and record.longitude:
+                map_data.append({
+                    'location': record.location,
+                    'latitude': float(record.latitude),
+                    'longitude': float(record.longitude),
+                    'cases': record.cases,
+                    'deaths': record.deaths,
+                    'recovered': record.recovered,
+                    'date': record.date.strftime('%Y-%m-%d') if record.date else None
+                })
+            
+            # Aggregate data by date for trend chart
+            date_str = record.date.strftime('%Y-%m-%d') if record.date else 'No Date'
+            if date_str not in date_groups:
+                date_groups[date_str] = {
+                    'date': date_str,
+                    'cases': 0,
+                    'deaths': 0,
+                    'recovered': 0
+                }
+            date_groups[date_str]['cases'] += record.cases or 0
+            date_groups[date_str]['deaths'] += record.deaths or 0
+            date_groups[date_str]['recovered'] += record.recovered or 0
+        
+        # Convert date groups to sorted list
+        trend_data = sorted(date_groups.values(), key=lambda x: x['date'])
+    
+    # Get preview data
+    preview_data = records[:10] if records else []
+    preview_columns = ['location', 'date', 'cases', 'deaths', 'recovered']
+    
+    # Convert records to dictionary format for preview
+    preview_data = [{
+        'location': record.location,
+        'date': record.date.strftime('%Y-%m-%d') if record.date else None,
+        'cases': record.cases,
+        'deaths': record.deaths,
+        'recovered': record.recovered
+    } for record in preview_data]
+    
+    # Calculate summary statistics
+    summary_stats = {}
+    columns = ['cases', 'deaths', 'recovered']
+    date_range = "N/A"
+    visualization_title = "COVID-19 Data Visualization"
+    
+    # Add summary statistics
+    if records:
+        total_cases = sum(r.cases or 0 for r in records)
+        total_deaths = sum(r.deaths or 0 for r in records)
+        total_recovered = sum(r.recovered or 0 for r in records)
+        
+        summary_stats = {
+            'total cases': f"{total_cases:,}",
+            'total deaths': f"{total_deaths:,}",
+            'total recovered': f"{total_recovered:,}",
+            'case fatality rate': f"{(total_deaths / total_cases * 100):.2f}%" if total_cases > 0 else "N/A",
+            'recovery rate': f"{(total_recovered / total_cases * 100):.2f}%" if total_cases > 0 else "N/A"
+        }
+        
+        # Calculate date range if dates are available
+        dates = [r.date for r in records if r.date]
+        if dates:
+            min_date = min(dates).strftime('%Y-%m-%d')
+            max_date = max(dates).strftime('%Y-%m-%d')
+            date_range = f"{min_date} to {max_date}"
+    
+    # Add trend analysis and key observations
+    trend_analysis = "Data shows fluctuations in case numbers over time with notable peaks during outbreak periods."
+    key_observations = [
+        "Highest case numbers were reported in densely populated areas.",
+        "Recovery rates improved significantly in later time periods.",
+        "Regional differences in case fatality rates may indicate varying healthcare capacities."
+    ]
+    
+    return render_template('visualize.html',
+                         dataset=dataset,
+                         map_data=json.dumps(map_data),
+                         trend_data=json.dumps(trend_data),
+                         preview_data=preview_data,
+                         preview_columns=preview_columns,
+                         numeric_fields=['cases', 'deaths', 'recovered'],
+                         summary_stats=summary_stats,
+                         columns=columns,
+                         date_range=date_range,
+                         visualization_title=visualization_title,
+                         trend_analysis=trend_analysis,
+                         key_observations=key_observations)
+
+# Simple Export Route
+@app.route('/export/<int:dataset_id>')
+@login_required
+def export_dataset(dataset_id):
+    # Get dataset
+    dataset = Dataset.query.get_or_404(dataset_id)
+    
+    # Check permission
+    is_owner = dataset.user_id == current_user.id
+    is_shared = False  # We'll implement sharing later
+    is_public = dataset.sharing_status == 'public'
+    
+    if not (is_owner or is_shared or is_public):
+        flash('You do not have access to this dataset!!!', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Get export format
+    export_format = request.args.get('format', 'csv')
+    
+    try:
+        # Load the file
+        df = None
+        
+        if dataset.filepath and os.path.exists(dataset.filepath):
+            if dataset.filename.endswith('.csv'):
+                df = pd.read_csv(dataset.filepath)
+            elif dataset.filename.endswith('.json'):
+                df = pd.read_json(dataset.filepath)
+            elif dataset.filename.endswith('.xlsx') or dataset.filename.endswith('.xls'):
+                df = pd.read_excel(dataset.filepath)
+        else:
+            flash('Dataset file not found', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Export based on format
+        if export_format == 'csv':
+            output = io.StringIO()
+            df.to_csv(output, index=False)
+            output.seek(0)
+            
+            return send_file(
+                io.BytesIO(output.getvalue().encode('utf-8')),
+                mimetype='text/csv',
+                as_attachment=True,
+                download_name=f"{dataset.name}_export.csv"
+            )
+        
+        elif export_format == 'json':
+            output = io.StringIO()
+            df.to_json(output, orient='records')
+            output.seek(0)
+            
+            return send_file(
+                io.BytesIO(output.getvalue().encode('utf-8')),
+                mimetype='application/json',
+                as_attachment=True,
+                download_name=f"{dataset.name}_export.json"
+            )
+        
+        else:
+            flash('Unsupported export format', 'error')
+            return redirect(url_for('visualize', dataset_id=dataset_id))
+            
+    except Exception as e:
+        flash(f'Error exporting dataset: {str(e)}', 'error')
+        return redirect(url_for('visualize', dataset_id=dataset_id))
+
+# Add a debug endpoint to inspect file content
+@app.route('/debug_file/<int:dataset_id>')
+@login_required
+def debug_file(dataset_id):
+    # Check if user is admin or file owner
+    dataset = Dataset.query.get_or_404(dataset_id)
+    
+    if dataset.user_id != current_user.id:
+        flash('Access denied.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        # Check file type and read preview
+        if dataset.filepath and os.path.exists(dataset.filepath):
+            if dataset.file_type == 'text/csv' or dataset.filename.endswith('.csv'):
+                # Read first few rows of CSV
+                df = pd.read_csv(dataset.filepath, nrows=5)
+                column_names = df.columns.tolist()
+                sample_data = df.head(5).to_dict('records')
+                
+                return render_template('debug_file.html', 
+                                      dataset=dataset,
+                                      column_names=column_names,
+                                      sample_data=sample_data,
+                                      file_type='CSV')
+                
+            elif dataset.file_type == 'application/json' or dataset.filename.endswith('.json'):
+                # Read first few records of JSON
+                with open(dataset.filepath, 'r') as f:
+                    json_data = []
+                    for i, line in enumerate(f):
+                        if i >= 5:  # Read up to 5 lines
+                            break
+                        if line.strip():
+                            json_data.append(json.loads(line))
+                
+                # Get column names from first record if available
+                column_names = []
+                if json_data:
+                    column_names = list(json_data[0].keys())
+                
+                return render_template('debug_file.html',
+                                     dataset=dataset,
+                                     column_names=column_names,
+                                     sample_data=json_data,
+                                     file_type='JSON')
+        
+        flash('File not found or unsupported format', 'error')
+        return redirect(url_for('dashboard'))
+        
+    except Exception as e:
+        flash(f'Error inspecting file: {str(e)}', 'error')
+        return redirect(url_for('dashboard'))
+
+@app.route('/delete_dataset/<int:dataset_id>', methods=['POST'])
+@login_required
+def delete_dataset(dataset_id):
+    dataset = Dataset.query.get_or_404(dataset_id)
+    if dataset.user_id != current_user.id:
+        flash('You do not have permission to delete this dataset.', 'error')
+        return redirect(url_for('dashboard'))
+    try:
+        # Delete associated records
+        EpidemicRecord.query.filter_by(dataset_id=dataset.id).delete()
+        db.session.delete(dataset)
+        db.session.commit()
+        flash('Dataset deleted successfully.', 'success')
     except Exception as e:
         db.session.rollback()
-        logger.error(f"Error generating share link: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
+        flash(f'Error deleting dataset: {str(e)}', 'error')
+    return redirect(url_for('dashboard'))
 
+# --------------------------------------------
+# Helper Functions
+# --------------------------------------------
+def allowed_file(filename):
+    """Check if the file has an allowed extension"""
+    ALLOWED_EXTENSIONS = {'csv', 'json', 'xlsx', 'xls'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@app.route("/shared/<token>")
-def view_shared(token):
+# Add this function for batch processing
+def process_batch(records, dataset_id, user_id):
     try:
-        # Find the shared dataset by token
-        shared = SharedDataset.query.filter_by(access_token=token).first_or_404()
-
-        # Check if share has expired
-        if shared.expires_at and shared.expires_at < datetime.utcnow():
-            return render_template('404.html', message="This share link has expired."), 404
-
-        # Get the dataset
-        dataset = Dataset.query.get_or_404(shared.dataset_id)
-
-        # Add owner information
-        dataset.owner = User.query.get(dataset.user_id)
-
-        return render_template("view_shared.html", dataset=dataset)
+        epidemic_records = []
+        for record in records:
+            lat = record.get('latitude') or record.get('lat') or None
+            lon = record.get('longitude') or record.get('long') or record.get('lon') or record.get('lng') or None
+            epidemic_record = EpidemicRecord(
+                dataset_id=dataset_id,
+                date=record.get('date') or record.get('Date') or None,
+                location=record.get('location') or record.get('Location') or record.get('region') or record.get('Region') or None,
+                cases=record.get('cases') or record.get('Cases') or record.get('confirmed') or record.get('Confirmed') or 0,
+                deaths=record.get('deaths') or record.get('Deaths') or 0,
+                recovered=record.get('recovered') or record.get('Recovered') or 0,
+                latitude=lat,
+                longitude=lon
+            )
+            epidemic_records.append(epidemic_record)
+        
+        if any(rec.latitude is not None and rec.longitude is not None for rec in epidemic_records):
+            dataset = Dataset.query.get(dataset_id)
+            if dataset:
+                dataset.has_geo = True
+                db.session.commit()
+        
+        db.session.bulk_save_objects(epidemic_records)
+        db.session.commit()
+        return True
     except Exception as e:
-        logger.error(f"Error viewing shared dataset: {str(e)}")
-        return render_template('500.html', error=str(e)), 500
+        db.session.rollback()
+        return str(e)
+
+# Add this function for chunked file reading
+def read_file_in_chunks(file_path):
+    with open(file_path, 'rb') as f:
+        while True:
+            chunk = f.read(app.config['CHUNK_SIZE'])
+            if not chunk:
+                break
+            yield chunk
+
+# --------------------------------------------
+# Main
+# --------------------------------------------
+if __name__ == '__main__':
+    # with app.app_context():
+    #     db.create_all()
+    # using migrate instead of create_all to handle db migrations
+    app.run(debug=True, host='0.0.0.0', port=8080)
 
 
-# Error handlers
-@app.errorhandler(404)
-def page_not_found(e):
-    try:
-        return render_template('404.html'), 404
-    except:
-        return '<h1>Page Not Found</h1><p>The requested page does not exist.</p>', 404
 
-@app.errorhandler(500)
-def internal_server_error(e):
-    try:
-        return render_template('500.html'), 500
-    except:
-        return '<h1>Internal Server Error</h1><p>Something went wrong on our end.</p>', 500
 
-@app.errorhandler(Exception)
-def handle_exception(e):
-    app.logger.error(f"Unhandled exception: {str(e)}")
-    try:
-        return render_template('500.html', error=str(e)), 500
-    except:
-        return '<h1>Internal Server Error</h1><p>Something went wrong on our end.</p>', 500
 
-if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-    app.run(debug=True)

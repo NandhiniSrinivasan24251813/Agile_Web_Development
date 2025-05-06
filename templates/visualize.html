@@ -1,164 +1,292 @@
-{% extends 'base.html' %}
-{% block title %}Visualize - {{ dataset.name }} - Epidemic Monitoring{% endblock %}
+{% extends 'base.html' %} {% block title %}Visualize: {{ dataset.name }} - EMS{%
+endblock %} {% block content %}
+<!-- Leaflet CSS -->
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+  crossorigin=""
+/>
 
-{% block head %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
-      integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
-      crossorigin="" />
-<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
-        integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
-        crossorigin=""></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<!-- Leaflet JS -->
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+  crossorigin=""
+></script>
 
-<style>
-  .tab-content {
-    display: none;
-  }
-  .tab-content.active {
-    display: block;
-  }
-</style>
-{% endblock %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/map.css') }}" />
 
-{% block content %}
-<div>
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h2 mb-0">{{ dataset.name }}</h1>
-    <div>
-      <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary">
-        <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
-      </a>
+<div class="container-fluid py-4 fade-in">
+  <div class="row">
+    <!-- Left Sidebar -->
+    <div class="col-lg-3 col-md-4">
+      <div class="card shadow-sm mb-4 fade-in-up">
+        <div class="card-header bg-transparent">
+          <h3 class="h5 mb-0">Visualization Options</h3>
+        </div>
+        <div class="card-body">
+          <form id="visualize-form" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="mb-3">
+              <label for="chart_type" class="form-label">Chart Type</label>
+              <select class="form-select" id="chart_type" name="chart_type">
+                <option value="line" {% if chart_type == 'line' %}selected{% endif %}>Line Chart</option>
+                <option value="bar" {% if chart_type == 'bar' %}selected{% endif %}>Bar Chart</option>
+                <option value="scatter" {% if chart_type == 'scatter' %}selected{% endif %}>Scatter Plot</option>
+                <option value="pie" {% if chart_type == 'pie' %}selected{% endif %}>Pie Chart</option>
+                <option value="map" {% if chart_type == 'map' %}selected{% endif %}>Map View</option>
+                <option value="heatmap" {% if chart_type == 'heatmap' %}selected{% endif %}>Heat Map</option>
+              </select>
+            </div>
+            
+            <div class="mb-3">
+              <label for="data_column" class="form-label">Data Column</label>
+              <select class="form-select" id="data_column" name="data_column">
+                {% for column in columns %}
+                <option value="{{ column }}" {% if data_column == column %}selected{% endif %}>{{ column|capitalize }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            
+            <div class="mb-3">
+              <label for="group_by" class="form-label">Group By</label>
+              <select class="form-select" id="group_by" name="group_by">
+                <option value="none" {% if group_by == 'none' %}selected{% endif %}>None</option>
+                {% for column in columns %}
+                <option value="{{ column }}" {% if group_by == column %}selected{% endif %}>{{ column|capitalize }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            
+            <div class="mb-3">
+              <label for="time_period" class="form-label">Time Period</label>
+              <select class="form-select" id="time_period" name="time_period">
+                <option value="all" {% if time_period == 'all' %}selected{% endif %}>All Time</option>
+                <option value="week" {% if time_period == 'week' %}selected{% endif %}>Last Week</option>
+                <option value="month" {% if time_period == 'month' %}selected{% endif %}>Last Month</option>
+                <option value="year" {% if time_period == 'year' %}selected{% endif %}>Last Year</option>
+                <option value="custom" {% if time_period == 'custom' %}selected{% endif %}>Custom Range</option>
+              </select>
+            </div>
+            
+            <div id="custom_dates" class="mb-3 {% if time_period != 'custom' %}d-none{% endif %}">
+              <div class="row">
+                <div class="col-md-6">
+                  <label for="start_date" class="form-label">Start Date</label>
+                  <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date or '' }}">
+                </div>
+                <div class="col-md-6">
+                  <label for="end_date" class="form-label">End Date</label>
+                  <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date or '' }}">
+                </div>
+              </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary w-100" id="update-chart">
+              <i class="fas fa-sync-alt me-2"></i>Update Visualization
+            </button>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Dataset Info Card -->
+      <div class="card shadow-sm mb-4 slide-in-right" style="animation-delay: 0.2s">
+        <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+          <h3 class="h5 mb-0">Dataset Info</h3>
+          <a href="{{ url_for('dashboard') }}" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back
+          </a>
+        </div>
+        <div class="card-body">
+          <h4 class="h6 mb-3">{{ dataset.name }}</h4>
+          
+          <div class="mb-2">
+            <span class="text-muted">Records:</span>
+            <span class="fw-bold">{{ dataset.record_count }}</span>
+          </div>
+          
+          <div class="mb-2">
+            <span class="text-muted">Columns:</span>
+            <span class="fw-bold">{{ columns|length }}</span>
+          </div>
+          
+          <div class="mb-2">
+            <span class="text-muted">Date Range:</span>
+            <span class="fw-bold">{{ date_range }}</span>
+          </div>
+          
+          <div class="mb-2">
+            <span class="text-muted">Uploaded:</span>
+            <span class="fw-bold">{{ dataset.upload_date.strftime('%d %b %Y') }}</span>
+          </div>
+          
+          {% if dataset.description %}
+          <div class="mt-3">
+            <span class="text-muted">Description:</span>
+            <p class="small mt-1">{{ dataset.description }}</p>
+          </div>
+          {% endif %}
+          
+          <div class="mt-3">
+            <a href="{{ url_for('export_dataset', dataset_id=dataset.id) }}" class="btn btn-sm btn-outline-primary w-100">
+              <i class="fas fa-download me-1"></i>Export Data
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-
-  {% if dataset.description %}
-  <div class="alert alert-info mb-4">
-    <p class="mb-0">{{ dataset.description }}</p>
-  </div>
-  {% endif %}
-
-  <div class="card shadow-sm mb-4">
-    <div class="card-body">
-      <ul class="nav nav-tabs mb-4" role="tablist">
-        <li class="nav-item" role="presentation">
-          <button class="nav-link tab-button active" data-tab="chart-view" type="button" role="tab">
-            Chart View
-          </button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link tab-button" data-tab="map-view" type="button" role="tab">
-            Map View
-          </button>
-        </li>
-      </ul>
-
-      <div class="tab-content active" id="chart-view">
-        <div class="mb-4">
-          <h2 class="h5 mb-3">Customize Chart</h2>
-          <div class="row g-3">
-            <div class="col-md-4">
-              <label for="chart-type" class="form-label">Chart Type</label>
-              <select id="chart-type" class="form-select">
-                <option value="line">Line Chart</option>
-                <option value="bar">Bar Chart</option>
-                <option value="pie">Pie Chart</option>
-              </select>
-            </div>
-
-            <div class="col-md-4">
-              <label for="data-field" class="form-label">Data Field</label>
-              <select id="data-field" class="form-select">
-                <option value="cases">Cases</option>
-                <option value="deaths">Deaths</option>
-                <option value="recovered">Recovered</option>
-                <option value="hospitalized">Hospitalized</option>
-                <option value="tested">Tested</option>
-              </select>
-            </div>
-
-            <div class="col-md-4">
-              <label for="group-by" class="form-label">Group By</label>
-              <select id="group-by" class="form-select">
-                <option value="date">Date</option>
-                <option value="location">Location</option>
-              </select>
+    
+    <!-- Main Visualization Area -->
+    <div class="col-lg-9 col-md-8">
+      <div class="card shadow-sm h-100 fade-in-up" style="animation-delay: 0.1s">
+        <div class="card-header bg-transparent">
+          <div class="d-flex justify-content-between align-items-center">
+            <h3 class="h5 mb-0">{{ visualization_title }}</h3>
+            <!-- Visualization Controls -->
+            <div class="btn-group">
+              <button id="fullscreen-btn" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-expand"></i>
+              </button>
+              <button id="download-btn" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-download"></i>
+              </button>
+              <button id="share-btn" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-share-alt"></i>
+              </button>
             </div>
           </div>
         </div>
-
-        <div style="height: 400px;" class="position-relative">
-          <canvas id="chart-container"></canvas>
-        </div>
-
-        <div class="mt-3 text-end">
-          <button id="download-chart" class="btn btn-sm btn-outline-primary">
-            <i class="bi bi-download me-1"></i> Download Chart
-          </button>
-        </div>
-      </div>
-
-      <div class="tab-content" id="map-view">
-        <div class="mb-4">
-          <h2 class="h5 mb-3">Map Settings</h2>
-          <div class="row g-3">
-            <div class="col-md-4">
-              <label for="map-data-field" class="form-label">Data Field</label>
-              <select id="map-data-field" class="form-select">
-                <option value="cases">Cases</option>
-                <option value="deaths">Deaths</option>
-                <option value="recovered">Recovered</option>
-                <option value="hospitalized">Hospitalized</option>
-                <option value="tested">Tested</option>
-              </select>
-            </div>
-
-            <div class="col-md-4">
-              <label for="map-view-type" class="form-label">View Type</label>
-              <select id="map-view-type" class="form-select">
-                <option value="markers">Markers</option>
-                <option value="heatmap">Heatmap</option>
-              </select>
-            </div>
-
-            <div class="col-md-4">
-              <label for="date-filter" class="form-label">Date Filter</label>
-              <input type="date" id="date-filter" class="form-control">
-            </div>
-          </div>
-        </div>
-
-        <div id="map-container" class="mb-3" style="height: 400px;"></div>
-
-        <div class="mt-3 text-end">
-          <button id="download-map" class="btn btn-sm btn-outline-primary">
-            <i class="bi bi-download me-1"></i> Download Map
-          </button>
+        <div class="card-body">
+          <!-- Visualization will be rendered here -->
+          <div id="visualization-container" class="w-100 h-100" style="min-height: 500px;"></div>
         </div>
       </div>
     </div>
   </div>
-
-  <div class="card shadow-sm">
-    <div class="card-header bg-white">
-      <h2 class="h5 mb-0">Raw Data</h2>
-    </div>
-    <div class="card-body">
-      <div class="table-responsive">
-        <table class="table table-striped table-hover" id="data-table">
-          <thead class="table-light">
-            <tr id="data-header"></tr>
-          </thead>
-          <tbody id="data-body"></tbody>
-        </table>
+  
+  <!-- Insights Section -->
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="card shadow-sm fade-in-up" style="animation-delay: 0.4s">
+        <div class="card-header bg-transparent">
+          <h3 class="h5 mb-0">Insights & Analysis</h3>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="card mb-3">
+                <div class="card-body">
+                  <h4 class="h6">Summary Statistics</h4>
+                  <table class="table table-sm">
+                    <tbody>
+                      {% for stat, value in summary_stats.items() %}
+                      <tr>
+                        <td>{{ stat|capitalize }}</td>
+                        <td class="text-end">{{ value }}</td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card mb-3">
+                <div class="card-body">
+                  <h4 class="h6">Trend Analysis</h4>
+                  <div id="trend-chart" style="height: 200px;"></div>
+                  <p class="small text-muted mt-2">{{ trend_analysis }}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="col-12">
+              <div class="card">
+                <div class="card-body">
+                  <h4 class="h6">Key Observations</h4>
+                  <ul class="small">
+                    {% for observation in key_observations %}
+                    <li class="mb-1">{{ observation }}</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
+<!-- Hidden data for JavaScript -->
+<div id="map-data" style="display: none">{{ map_data|safe }}</div>
+<div id="trend-data" style="display: none">{{ trend_data|safe }}</div>
+
+<!-- JavaScript -->
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
 <script>
-  const datasetId = {{ dataset.id }};
+  document.addEventListener('DOMContentLoaded', function() {
+    // Toggle custom date inputs based on time period selection
+    const timePeriod = document.getElementById('time_period');
+    const customDates = document.getElementById('custom_dates');
+    
+    timePeriod.addEventListener('change', function() {
+      if (this.value === 'custom') {
+        customDates.classList.remove('d-none');
+      } else {
+        customDates.classList.add('d-none');
+      }
+    });
+    
+    // Show loading overlay on form submission
+    const form = document.getElementById('visualize-form');
+    form.addEventListener('submit', function() {
+      showLoadingOverlay();
+    });
+    
+    // Fullscreen functionality
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const visualizationContainer = document.getElementById('visualization-container');
+    
+    fullscreenBtn.addEventListener('click', function() {
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      } else {
+        visualizationContainer.requestFullscreen();
+      }
+    });
+    
+    // Download functionality (would need server-side implementation)
+    const downloadBtn = document.getElementById('download-btn');
+    downloadBtn.addEventListener('click', function() {
+      // This would typically trigger a download of the current visualization
+      alert('Download functionality will be implemented soon!');
+    });
+    
+    // Share functionality (would need server-side implementation)
+    const shareBtn = document.getElementById('share-btn');
+    shareBtn.addEventListener('click', function() {
+      // This would typically open a share dialog
+      alert('Share functionality will be implemented soon!');
+    });
+    
+    // Initialize charts based on the current visualization type
+    initializeVisualization();
+    
+    function initializeVisualization() {
+      // This function would initialize the specific visualization
+      // based on the chart_type selected by the user
+      
+      // Example initialization of trend chart
+      if (document.getElementById('trend-chart')) {
+        // Simplified example - would be replaced with actual chart library initialization
+        const trendChart = document.getElementById('trend-chart');
+        // Initialize chart with data from backend
+      }
+    }
+  });
 </script>
-<script src="{{ url_for('static', filename='js/visualize.js') }}"></script>
 {% endblock %}
