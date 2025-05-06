@@ -9,15 +9,67 @@ endblock %} {% block content %}
 />
 
 <!-- Leaflet JS -->
-<script
-  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-  crossorigin=""
-></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
-<link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='css/map.css') }}"/>
+<!-- Leaflet Marker Cluster -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
+<!-- Leaflet Heat -->
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Custom CSS -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/map.css') }}"/>
+
+<style>
+  .tab-content {
+    padding-top: 1rem;
+  }
+  
+  .chart-container {
+    height: 300px;
+    margin-bottom: 1rem;
+  }
+  
+  .map-controls {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .map-type-toggle {
+    display: flex;
+  }
+  
+  .map-type-toggle .btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.875rem;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .chart-container {
+      height: 250px;
+    }
+    
+    .map-controls {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    
+    .map-type-toggle {
+      margin-top: 0.5rem;
+    }
+  }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -27,20 +79,18 @@ endblock %} {% block content %}
             <h1>{{ dataset.name }}</h1>
             <p class="lead">{{ dataset.description }}</p>
         </div>
-        <div class="card-body">
-          <form id="visualize-form" method="POST">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            
-            <div class="mb-3">
-              <label for="chart_type" class="form-label">Chart Type</label>
-              <select class="form-select" id="chart_type" name="chart_type">
-                <option value="line" {% if chart_type == 'line' %}selected{% endif %}>Line Chart</option>
-                <option value="bar" {% if chart_type == 'bar' %}selected{% endif %}>Bar Chart</option>
-                <option value="scatter" {% if chart_type == 'scatter' %}selected{% endif %}>Scatter Plot</option>
-                <option value="pie" {% if chart_type == 'pie' %}selected{% endif %}>Pie Chart</option>
-                <option value="map" {% if chart_type == 'map' %}selected{% endif %}>Map View</option>
-                <option value="heatmap" {% if chart_type == 'heatmap' %}selected{% endif %}>Heat Map</option>
-              </select>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Dashboard
+                </a>
+                <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-download"></i> Export
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="/export/{{ dataset.id }}?format=csv">CSV</a></li>
+                    <li><a class="dropdown-item" href="/export/{{ dataset.id }}?format=json">JSON</a></li>
+                </ul>
             </div>
         </div>
     </div>
@@ -153,5 +203,5 @@ endblock %} {% block content %}
 <script src="{{ url_for('static', filename='js/dashboard-charts.js') }}"></script>
 
 <!-- Insights Generator Script -->
-<script src="{{ url_for('static', filename='js/Insights-generator.js') }}"></script>
+<script src="{{ url_for('static', filename='js/Insight-generator.js') }}"></script>
 {% endblock %}
