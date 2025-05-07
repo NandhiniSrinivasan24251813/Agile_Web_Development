@@ -18,6 +18,11 @@ from tqdm import tqdm
 import threading
 from queue import Queue
 import time
+import logging
+
+# Custom imports
+from data_bridge import DataBridge
+from utils import DataConverter
 
 
 # Initialization
@@ -31,6 +36,10 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['BATCH_SIZE'] = 1000  # Number of records to process in each batch
 app.config['MAX_WORKERS'] = 4    # Maximum number of worker threads
 app.config['CHUNK_SIZE'] = 1024 * 1024  # 1MB chunks for file reading
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('app')
 
 # folders setup
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -435,6 +444,9 @@ def dashboard():
                           user_datasets=user_datasets,
                           shared_datasets=shared_datasets)
 
+# ---------------------------------------------------------
+# Upload Route
+# ---------------------------------------------------------
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
 def upload():
@@ -455,107 +467,266 @@ def upload():
                 temp_path = os.path.join(app.config['UPLOAD_FOLDER'], f'temp_{filename}')
                 file.save(temp_path)
                 
+                # Detect file format
+                file_format = DataConverter.detect_file_type(temp_path)
+                
                 # Create dataset record
                 dataset = Dataset(
                     name=request.form.get('name', filename),
                     description=request.form.get('description', ''),
-                    filename=filename,
-                    filepath=temp_path,
-                    file_type=file.content_type,
+                    original_filename=filename,
+                    original_format=file_format,
                     user_id=current_user.id
                 )
-                db.session.add(dataset)
-                db.session.commit()
                 
-                # Process the file based on its type
-                if filename.lower().endswith('.csv'):
-                    # Read CSV in chunks
-                    chunks = pd.read_csv(temp_path, chunksize=app.config['BATCH_SIZE'])
-                    total_records = 0
-                    batch_error = None
+                # Try using the new unified storage approach
+                try:
+                    # Convert file to standardized JSON format
+                    data, metadata = DataBridge.file_to_standardized_data(temp_path, file_format)
                     
-                    for chunk in chunks:
-                        records = chunk.to_dict('records')
-                        if process_batch(records, dataset.id, current_user.id):
-                            total_records += len(records)
-                        else:
-                            batch_error = "Failed to process CSV data. Check column names match expected format."
-                            raise Exception(batch_error)
+                    # Update dataset with standardized data and metadata
+                    dataset.set_data(data)
                     
-                elif filename.lower().endswith('.json'):
-                    # Read JSON in chunks
-                    with open(temp_path, 'r') as f:
-                        records = []
-                        batch_error = None
-                        total_records = 0
+                    if 'record_count' in metadata:
+                        dataset.record_count = metadata['record_count']
+                    if 'has_geo' in metadata:
+                        dataset.has_geo = metadata['has_geo']
+                    if 'has_time' in metadata:
+                        dataset.has_time = metadata['has_time']
+                    if 'date_range_start' in metadata:
+                        dataset.date_range_start = metadata['date_range_start']
+                    if 'date_range_end' in metadata:
+                        dataset.date_range_end = metadata['date_range_end']
+                    
+                    # Save dataset to database
+                    db.session.add(dataset)
+                    db.session.commit()
+                    
+                    # Clean up temporary file
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+                    
+                    # Log the activity
+                    audit = AuditLog(
+                        user_id=current_user.id,
+                        action="upload_dataset",
+                        target_type="Dataset",
+                        target_id=dataset.id,
+                        details=f"Uploaded dataset '{dataset.name}' with {dataset.record_count} records"
+                    )
+                    db.session.add(audit)
+                    db.session.commit()
+                    
+                    flash('Dataset uploaded and processed successfully!', 'success')
+                    return redirect(url_for('visualize', dataset_id=dataset.id))
+                
+                except Exception as e:
+                    # If the new approach fails, fall back to the legacy method
+                    logger.warning(f"Error using unified JSON storage: {str(e)}")
+                    logger.info("Falling back to legacy record processing...")
+                    
+                    try:
+                        # Save the dataset without JSON data first
+                        db.session.add(dataset)
+                        db.session.commit()
                         
-                        for line in f:
-                            if line.strip():
-                                records.append(json.loads(line))
-                                if len(records) >= app.config['BATCH_SIZE']:
-                                    if process_batch(records, dataset.id, current_user.id):
-                                        total_records += len(records)
-                                        records = []
-                                    else:
-                                        batch_error = "Failed to process JSON data. Check data format."
-                                        raise Exception(batch_error)
+                        # Process the file based on its type using your existing method
+                        if file_format == 'csv':
+                            # Read CSV in chunks
+                            chunks = pd.read_csv(temp_path, chunksize=app.config['BATCH_SIZE'])
+                            for chunk in chunks:
+                                records = chunk.to_dict('records')
+                                process_batch(records, dataset.id, current_user.id)
+                                
+                        elif file_format == 'json':
+                            # Read JSON
+                            with open(temp_path, 'r') as f:
+                                records = json.load(f)
+                            process_batch(records, dataset.id, current_user.id)
+                            
+                        elif file_format in ['excel', 'xlsx', 'xls']:
+                            # Read Excel
+                            df = pd.read_excel(temp_path)
+                            records = df.to_dict('records')
+                            process_batch(records, dataset.id, current_user.id)
                         
-                        # Process remaining records
-                        if records:
-                            if process_batch(records, dataset.id, current_user.id):
-                                total_records += len(records)
-                            else:
-                                batch_error = "Failed to process JSON data. Check data format."
-                                raise Exception(batch_error)
-                
-                # Update dataset with record count
-                dataset.record_count = total_records
-                db.session.commit()
-                
-                flash('Dataset uploaded successfully!', 'success')
-                return redirect(url_for('dashboard'))
-                
+                        # Update record count
+                        count = EpidemicRecord.query.filter_by(dataset_id=dataset.id).count()
+                        dataset.record_count = count
+                        db.session.commit()
+                        
+                        # Clean up temporary file
+                        if os.path.exists(temp_path):
+                            os.remove(temp_path)
+                        
+                        # Log the activity
+                        audit = AuditLog(
+                            user_id=current_user.id,
+                            action="upload_dataset_legacy",
+                            target_type="Dataset",
+                            target_id=dataset.id,
+                            details=f"Uploaded dataset '{dataset.name}' with legacy processing"
+                        )
+                        db.session.add(audit)
+                        db.session.commit()
+                        
+                        flash('Dataset uploaded successfully (using legacy processing).', 'success')
+                        return redirect(url_for('dashboard'))
+                    
+                    except Exception as legacy_error:
+                        db.session.rollback()
+                        logger.error(f"Legacy processing also failed: {str(legacy_error)}")
+                        flash(f'Error processing file: {str(legacy_error)}', 'error')
+                        
+                        # Clean up temporary file
+                        if os.path.exists(temp_path):
+                            os.remove(temp_path)
+                            
+                        return redirect(request.url)
+                        
             except Exception as e:
                 db.session.rollback()
-                if os.path.exists(temp_path):
-                    os.remove(temp_path)
-                flash(f'Error processing file: {str(e)}', 'error')
+                flash(f'Error uploading file: {str(e)}', 'error')
                 return redirect(request.url)
         else:
-            flash('Invalid file type', 'error')
+            flash('Invalid file type. Please upload CSV, JSON, or Excel files.', 'error')
             return redirect(request.url)
     
     return render_template('upload.html')
 
+# ---------------------------------------------------------
+# Export Route
+# ---------------------------------------------------------
+@app.route('/export/<int:dataset_id>')
+@login_required
+def export_dataset(dataset_id):
+    # Get dataset
+    dataset = Dataset.query.get_or_404(dataset_id)
+    
+    # Check permission
+    is_owner = dataset.user_id == current_user.id
+    is_shared = SharedDataset.query.filter_by(dataset_id=dataset_id, shared_with_id=current_user.id, can_download=True).first() is not None
+    is_public = dataset.sharing_status == 'public'
+    
+    if not (is_owner or is_shared or is_public):
+        flash('You do not have permission to download this dataset', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Get export format
+    export_format = request.args.get('format', 'csv')
+    if export_format not in ['csv', 'json', 'excel', 'xlsx']:
+        flash('Unsupported export format', 'error')
+        return redirect(url_for('visualize', dataset_id=dataset_id))
+    
+    try:
+        # Get data from dataset using the unified storage
+        data = dataset.get_data()
+        
+        if not data:
+            flash('Dataset is empty', 'error')
+            return redirect(url_for('visualize', dataset_id=dataset_id))
+        
+        # Generate filename
+        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        base_name = os.path.splitext(dataset.original_filename)[0]
+        
+        if export_format == 'csv':
+            filename = f"{base_name}_{timestamp}.csv"
+            mimetype = 'text/csv'
+            
+            # Convert data to CSV
+            output = DataBridge.data_to_format(data, 'csv')
+            
+            return send_file(
+                io.BytesIO(output.encode('utf-8')),
+                mimetype=mimetype,
+                as_attachment=True,
+                download_name=filename
+            )
+        
+        elif export_format == 'json':
+            filename = f"{base_name}_{timestamp}.json"
+            mimetype = 'application/json'
+            
+            # Convert data to JSON
+            output = DataBridge.data_to_format(data, 'json')
+            
+            return send_file(
+                io.BytesIO(output.encode('utf-8')),
+                mimetype=mimetype,
+                as_attachment=True,
+                download_name=filename
+            )
+        
+        elif export_format in ['excel', 'xlsx']:
+            filename = f"{base_name}_{timestamp}.xlsx"
+            mimetype = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            
+            # Convert data to Excel (returns BytesIO)
+            output = DataBridge.data_to_format(data, 'excel')
+            
+            return send_file(
+                output,
+                mimetype=mimetype,
+                as_attachment=True,
+                download_name=filename
+            )
+            
+    except Exception as e:
+        logger.error(f"Error exporting dataset: {str(e)}")
+        flash(f'Error exporting dataset: {str(e)}', 'error')
+        return redirect(url_for('visualize', dataset_id=dataset_id))
+
+# ---------------------------------------------------------
+# Visualize Route
+# ---------------------------------------------------------
 @app.route('/visualize/<int:dataset_id>')
 @login_required
 def visualize(dataset_id):
     dataset = Dataset.query.get_or_404(dataset_id)
     
-    # Get the records for this dataset
-    records = EpidemicRecord.query.filter_by(dataset_id=dataset_id).all()
+    # Check if user has permission to view this dataset
+    is_owner = dataset.user_id == current_user.id
+    is_shared = SharedDataset.query.filter_by(dataset_id=dataset_id, shared_with_id=current_user.id).first() is not None
+    is_public = dataset.sharing_status == 'public'
+    
+    if not (is_owner or is_shared or is_public):
+        flash('You do not have permission to view this dataset', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Get the records using the new unified storage approach
+    records = dataset.get_data()
     
     # Prepare map data
     map_data = []
     trend_data = []
     
     if records:
-        # Group records by date for trend data
+        # Process records for map visualization
+        for record in records:
+            if 'latitude' in record and 'longitude' in record and record['latitude'] and record['longitude']:
+                try:
+                    lat = float(record['latitude'])
+                    lng = float(record['longitude'])
+                    
+                    if -90 <= lat <= 90 and -180 <= lng <= 180:
+                        map_point = {
+                            'location': record.get('location', 'Unknown'),
+                            'latitude': lat,
+                            'longitude': lng,
+                            'cases': record.get('cases', 0),
+                            'deaths': record.get('deaths', 0),
+                            'recovered': record.get('recovered', 0),
+                            'date': record.get('date')
+                        }
+                        map_data.append(map_point)
+                except (ValueError, TypeError):
+                    pass
+        
+        # Group records by date for trend visualization
         date_groups = {}
         for record in records:
-            if record.latitude and record.longitude:
-                map_data.append({
-                    'location': record.location,
-                    'latitude': float(record.latitude),
-                    'longitude': float(record.longitude),
-                    'cases': record.cases,
-                    'deaths': record.deaths,
-                    'recovered': record.recovered,
-                    'date': record.date.strftime('%Y-%m-%d') if record.date else None
-                })
-            
-            # Aggregate data by date for trend chart
-            date_str = record.date.strftime('%Y-%m-%d') if record.date else 'No Date'
+            date_str = record.get('date', 'Unknown')
             if date_str not in date_groups:
                 date_groups[date_str] = {
                     'date': date_str,
@@ -563,37 +734,41 @@ def visualize(dataset_id):
                     'deaths': 0,
                     'recovered': 0
                 }
-            date_groups[date_str]['cases'] += record.cases or 0
-            date_groups[date_str]['deaths'] += record.deaths or 0
-            date_groups[date_str]['recovered'] += record.recovered or 0
+            
+            date_groups[date_str]['cases'] += record.get('cases', 0)
+            date_groups[date_str]['deaths'] += record.get('deaths', 0)
+            date_groups[date_str]['recovered'] += record.get('recovered', 0)
         
         # Convert date groups to sorted list
         trend_data = sorted(date_groups.values(), key=lambda x: x['date'])
     
-    # Get preview data
+    # Get preview data (first 10 records)
     preview_data = records[:10] if records else []
-    preview_columns = ['location', 'date', 'cases', 'deaths', 'recovered']
     
-    # Convert records to dictionary format for preview
-    preview_data = [{
-        'location': record.location,
-        'date': record.date.strftime('%Y-%m-%d') if record.date else None,
-        'cases': record.cases,
-        'deaths': record.deaths,
-        'recovered': record.recovered
-    } for record in preview_data]
+    # Determine columns to show
+    # preview_columns = ['location', 'date', 'latitude', 'longitude', 'cases', 'deaths', 'recovered']
+    preview_columns = ['location', 'date', 'cases', 'deaths', 'recovered']
+    numeric_fields = ['cases', 'deaths', 'recovered']
+    
+    # Add columns for additional data if present
+    if any('tested' in record for record in preview_data):
+        preview_columns.append('tested')
+        numeric_fields.append('tested')
+    
+    if any('hospitalized' in record for record in preview_data):
+        preview_columns.append('hospitalized')
+        numeric_fields.append('hospitalized')
     
     # Calculate summary statistics
     summary_stats = {}
-    columns = ['cases', 'deaths', 'recovered']
-    date_range = "N/A"
-    visualization_title = "COVID-19 Data Visualization"
+    date_range = dataset.date_range_start.strftime('%Y-%m-%d') + ' to ' + dataset.date_range_end.strftime('%Y-%m-%d') if dataset.date_range_start and dataset.date_range_end else "N/A"
+    visualization_title = dataset.name
     
     # Add summary statistics
     if records:
-        total_cases = sum(r.cases or 0 for r in records)
-        total_deaths = sum(r.deaths or 0 for r in records)
-        total_recovered = sum(r.recovered or 0 for r in records)
+        total_cases = sum(record.get('cases', 0) for record in records)
+        total_deaths = sum(record.get('deaths', 0) for record in records)
+        total_recovered = sum(record.get('recovered', 0) for record in records)
         
         summary_stats = {
             'total cases': f"{total_cases:,}",
@@ -602,15 +777,7 @@ def visualize(dataset_id):
             'case fatality rate': f"{(total_deaths / total_cases * 100):.2f}%" if total_cases > 0 else "N/A",
             'recovery rate': f"{(total_recovered / total_cases * 100):.2f}%" if total_cases > 0 else "N/A"
         }
-        
-        # Calculate date range if dates are available
-        dates = [r.date for r in records if r.date]
-        if dates:
-            min_date = min(dates).strftime('%Y-%m-%d')
-            max_date = max(dates).strftime('%Y-%m-%d')
-            date_range = f"{min_date} to {max_date}"
     
-    # Add trend analysis and key observations
     trend_analysis = "Data shows fluctuations in case numbers over time with notable peaks during outbreak periods."
     key_observations = [
         "Highest case numbers were reported in densely populated areas.",
@@ -624,80 +791,13 @@ def visualize(dataset_id):
                          trend_data=json.dumps(trend_data),
                          preview_data=preview_data,
                          preview_columns=preview_columns,
-                         numeric_fields=['cases', 'deaths', 'recovered'],
+                         numeric_fields=numeric_fields,
                          summary_stats=summary_stats,
-                         columns=columns,
+                         columns=numeric_fields,
                          date_range=date_range,
                          visualization_title=visualization_title,
                          trend_analysis=trend_analysis,
                          key_observations=key_observations)
-
-# Simple Export Route
-@app.route('/export/<int:dataset_id>')
-@login_required
-def export_dataset(dataset_id):
-    # Get dataset
-    dataset = Dataset.query.get_or_404(dataset_id)
-    
-    # Check permission
-    is_owner = dataset.user_id == current_user.id
-    is_shared = False  # We'll implement sharing later
-    is_public = dataset.sharing_status == 'public'
-    
-    if not (is_owner or is_shared or is_public):
-        flash('You do not have access to this dataset!!!', 'error')
-        return redirect(url_for('dashboard'))
-    
-    # Get export format
-    export_format = request.args.get('format', 'csv')
-    
-    try:
-        # Load the file
-        df = None
-        
-        if dataset.filepath and os.path.exists(dataset.filepath):
-            if dataset.filename.endswith('.csv'):
-                df = pd.read_csv(dataset.filepath)
-            elif dataset.filename.endswith('.json'):
-                df = pd.read_json(dataset.filepath)
-            elif dataset.filename.endswith('.xlsx') or dataset.filename.endswith('.xls'):
-                df = pd.read_excel(dataset.filepath)
-        else:
-            flash('Dataset file not found', 'error')
-            return redirect(url_for('dashboard'))
-        
-        # Export based on format
-        if export_format == 'csv':
-            output = io.StringIO()
-            df.to_csv(output, index=False)
-            output.seek(0)
-            
-            return send_file(
-                io.BytesIO(output.getvalue().encode('utf-8')),
-                mimetype='text/csv',
-                as_attachment=True,
-                download_name=f"{dataset.name}_export.csv"
-            )
-        
-        elif export_format == 'json':
-            output = io.StringIO()
-            df.to_json(output, orient='records')
-            output.seek(0)
-            
-            return send_file(
-                io.BytesIO(output.getvalue().encode('utf-8')),
-                mimetype='application/json',
-                as_attachment=True,
-                download_name=f"{dataset.name}_export.json"
-            )
-        
-        else:
-            flash('Unsupported export format', 'error')
-            return redirect(url_for('visualize', dataset_id=dataset_id))
-            
-    except Exception as e:
-        flash(f'Error exporting dataset: {str(e)}', 'error')
-        return redirect(url_for('visualize', dataset_id=dataset_id))
 
 # Add a debug endpoint to inspect file content
 @app.route('/debug_file/<int:dataset_id>')
@@ -770,6 +870,11 @@ def delete_dataset(dataset_id):
         db.session.rollback()
         flash(f'Error deleting dataset: {str(e)}', 'error')
     return redirect(url_for('dashboard'))
+
+# @app.route('/map-test')
+# @login_required
+# def map_test():
+#     return render_template('map-test.html')
 
 # --------------------------------------------
 # Helper Functions
