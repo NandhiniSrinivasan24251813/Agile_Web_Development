@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}Map Test{% endblock %}
+
+{% block extra_css %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<style>
+  /* Explicit map styling */
+  #basic-map {
+    height: 400px !important;
+    width: 100% !important;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    border: 2px solid #333;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="row">
+    <div class="col-12">
+      <h1>Map Test</h1>
+      <p>Test only</p>
+      
+      <!-- Simple map container -->
+      <div id="basic-map"></div>
+      
+      <div class="card mt-3">
+        <div class="card-header">Map Status</div>
+        <div class="card-body">
+          <div id="map-status">Waiting for map to initialize...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Leaflet JS (loaded directly from CDN) -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Simple map initialization -->
+<script>
+// Wait for the page to fully load
+window.addEventListener('load', function() {
+  // Set a status message
+  const statusDiv = document.getElementById('map-status');
+  statusDiv.innerHTML = "Page loaded, initializing map...";
+
+  try {
+    // Get the map container
+    const mapContainer = document.getElementById('basic-map');
+    if (!mapContainer) {
+      throw new Error("Map container not found");
+    }
+    
+    // Update status
+    statusDiv.innerHTML += "<br>Map container found, dimensions: " + 
+      mapContainer.offsetWidth + "x" + mapContainer.offsetHeight;
+    
+    // Create a basic Leaflet map centered on the world
+    const map = L.map('basic-map').setView([0, 0], 2);
+    
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    
+    // Add a single marker to test marker functionality
+    const testMarker = L.marker([51.5, -0.09]).addTo(map);
+    testMarker.bindPopup("<b>Test Marker</b><br>London").openPopup();
+    
+    // Update status on success
+    statusDiv.innerHTML += "<br>Map successfully initialized!";
+    statusDiv.style.color = "green";
+    
+    // Add a test circle marker
+    L.circleMarker([40.7, -74.0], {
+      radius: 10,
+      fillColor: 'red',
+      color: '#000',
+      weight: 1,
+      opacity: 1,
+      fillOpacity: 0.8
+    }).addTo(map).bindPopup("Test Circle");
+    
+  } catch (error) {
+    // Display any errors
+    statusDiv.innerHTML += "<br>Error: " + error.message;
+    statusDiv.style.color = "red";
+  }
+});
+</script>
+
+<script>
+    alert('JavaScript is working');
+</script>
+{% endblock %}

@@ -1,5 +1,8 @@
-{% extends 'base.html' %} {% block title %}Visualize: {{ dataset.name }} - EMS{%
-endblock %} {% block content %}
+{% extends 'base.html' %}
+
+{% block title %}Visualize: {{ dataset.name }} - EMS{% endblock %}
+
+{% block extra_css %}
 <!-- Leaflet CSS -->
 <link
   rel="stylesheet"
@@ -8,20 +11,9 @@ endblock %} {% block content %}
   crossorigin=""
 />
 
-<!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-
 <!-- Leaflet Marker Cluster -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
-<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
-
-<!-- Leaflet Heat -->
-<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <!-- Custom CSS -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/map.css') }}"/>
@@ -68,6 +60,14 @@ endblock %} {% block content %}
     .map-type-toggle {
       margin-top: 0.5rem;
     }
+  }
+  
+  /* Essential map container styling */
+  #map {
+    height: 500px;
+    width: 100%;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
   }
 </style>
 {% endblock %}
@@ -135,7 +135,7 @@ endblock %} {% block content %}
                                 {% for row in preview_data %}
                                 <tr>
                                     {% for column in preview_columns %}
-                                    <td>{{ row[column] }}</td>
+                                    <td>{{ row.get(column, '') }}</td>
                                     {% endfor %}
                                 </tr>
                                 {% endfor %}
@@ -156,7 +156,7 @@ endblock %} {% block content %}
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             Type
-                            <span class="badge bg-primary">{{ dataset.file_type|capitalize }}</span>
+                            <span class="badge bg-primary">{{ dataset.original_format|capitalize }}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             Records
@@ -193,14 +193,51 @@ endblock %} {% block content %}
 
 <!-- Hidden data for JavaScript -->
 <div id="map-data" style="display: none;">{{ map_data|safe }}</div>
+<div id="trend-data" style="display: none;">{{ trend_data|safe }}</div>
 {% endblock %}
 
-{% block scripts %}
-<!-- Enhanced Map Script -->
-<script src="{{ url_for('static', filename='js/enhanced-map.js') }}"></script>
+{% block extra_js %}
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
-<!-- Dashboard Charts Script -->
-<script src="{{ url_for('static', filename='js/dashboard-charts.js') }}"></script>
+<!-- Leaflet Marker Cluster -->
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
+<!-- Leaflet Heat -->
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Debugging output -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("Document loaded. Checking map data...");
+    const mapDataElement = document.getElementById('map-data');
+    if (mapDataElement) {
+        console.log("Map data element found:", mapDataElement);
+        const rawData = mapDataElement.textContent || '[]';
+        console.log("First 100 chars of map data:", rawData.substring(0, 100));
+        try {
+            const parsedData = JSON.parse(rawData);
+            console.log("Map data parsed successfully. Points:", parsedData.length);
+            if (parsedData.length > 0) {
+                console.log("First point:", parsedData[0]);
+            }
+        } catch(e) {
+            console.error("Error parsing map data:", e);
+        }
+    } else {
+        console.error("Map data element not found!");
+    }
+    
+    console.log("Map container element:", document.getElementById('map'));
+});
+</script>
+
+<!-- Enhanced Map Script -->
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
 
 <!-- Insights Generator Script -->
 <script src="{{ url_for('static', filename='js/Insight-generator.js') }}"></script>
