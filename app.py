@@ -4,7 +4,7 @@ from models import db, User, AuditLog
 from flask_wtf.csrf import CSRFProtect
 from datetime import datetime
 from flask_migrate import Migrate
-
+from flask import abort
 from models import db, User, AuditLog, PasswordResetToken, Dataset, EpidemicRecord, SharedDataset
 import secrets
 from forms import EditProfileForm
@@ -19,10 +19,13 @@ import threading
 from queue import Queue
 import time
 import logging
-
+from flask import abort, flash, redirect, url_for
 # Custom imports
 from data_bridge import DataBridge
 from utils import DataConverter
+from twilio.rest import Client
+import random
+from flask import session
 
 
 # Initialization
@@ -65,13 +68,74 @@ def load_user(user_id):
 def index():
     return render_template('index.html')
 
+
+from flask_mail import Mail, Message
+
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'  # or your mail server
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'harpreetvallah2@gmail.com'
+app.config['MAIL_PASSWORD'] = 'owoz huca itgc zvqj'  # Use an app-specific password
+
+mail = Mail(app)
+
+# #configuration for sending otp
+# TWILIO_ACCOUNT_SID = 'ACa1aa3014d7009150d3c941915d925792'
+# TWILIO_AUTH_TOKEN = '12c9fded3eb8bd2d61471ab3d9bc27f7'
+# TWILIO_PHONE_NUMBER = '+61 405289536'  # Your Twilio number
+
+import pyotp
+
+def send_otp_email(user_email, otp):
+    subject = "🔐 Your OTP Code"
+    body = f"""
+    Hi,
+
+    Your OTP code is: {otp}
+
+    Please enter this to verify your account.
+
+    Thanks,
+    The Team
+    """
+    msg = Message(subject, sender="your_project_email@example.com", recipients=[user_email])
+    msg.body = body
+    mail.send(msg)
+
+
+def send_welcome_email(user_email, username):
+    subject = "🎉 Welcome to Our Platform!"
+    body = f"""
+            Hi {username},
+
+            Thank you for signing up with us!
+
+            We’re excited to have you on board. If you have any questions, feel free to reach out.
+
+            Best regards,  
+            The Team
+            """
+    msg = Message(subject, sender=('Epidemic Monitoring System',"your_email@gmail.com"), recipients=[user_email])
+    msg.body = body
+    mail.send(msg)
+
+def send_otp(mobile, otp):
+    client = Client(app.config['TWILIO_ACCOUNT_SID'], app.config['TWILIO_AUTH_TOKEN'])
+    message = client.messages.create(
+        body=f'Your OTP is: {otp}',
+        from_=app.config['TWILIO_PHONE_NUMBER'],
+        to=mobile
+    )
+
+
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
-        username = request.form.get('username')
-        email = request.form.get('email')
-        password = request.form.get('password')
+        username         = request.form.get('username')
+        email            = request.form.get('email')
+        password         = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
+        mobile_number    = request.form.get('mobile_number')
 
         # Check if username or email already exists
         if User.query.filter_by(username=username).first():
