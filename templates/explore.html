@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Explore All Datasets</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 600px;
+            width: 100%;
+            margin: 20px 0;
+        }
+        .map-controls {
+            margin: 10px 0;
+        }
+        .legend {
+            background: white;
+            padding: 10px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Explore Public Epidemic Datasets</h1>
+
+    <div class="map-controls">
+        <label for="dataset-filter">Filter by Dataset:</label>
+        <select id="dataset-filter">
+            <option value="all">Show All</option>
+        </select>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        const map = L.map('map').setView([20, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        const combinedMapData = {{ combined_map_data | safe }};
+        const datasetFilter = document.getElementById("dataset-filter");
+
+        // Build unique dataset list
+        const datasetSet = new Set();
+        combinedMapData.forEach(p => datasetSet.add(p.dataset_name));
+        const datasetList = Array.from(datasetSet);
+
+        // Populate the dropdown
+        datasetList.forEach(name => {
+            const opt = document.createElement("option");
+            opt.value = name;
+            opt.textContent = name;
+            datasetFilter.appendChild(opt);
+        });
+
+        // Store markers by dataset name
+        const datasetMarkers = {};
+        combinedMapData.forEach(p => {
+            const popup = `
+                <b>Dataset:</b> ${p.dataset_name}<br>
+                <b>Cases:</b> ${p.cases}<br>
+                <b>Deaths:</b> ${p.deaths}<br>
+                <b>Recovered:</b> ${p.recovered}
+            `;
+            const marker = L.marker([p.latitude, p.longitude]).bindPopup(popup);
+
+            if (!datasetMarkers[p.dataset_name]) {
+                datasetMarkers[p.dataset_name] = [];
+            }
+            datasetMarkers[p.dataset_name].push(marker);
+            marker.addTo(map);
+        });
+
+        // Filter logic
+        datasetFilter.addEventListener("change", () => {
+            const selected = datasetFilter.value;
+
+            // Remove all markers
+            Object.values(datasetMarkers).flat().forEach(m => map.removeLayer(m));
+
+            if (selected === "all") {
+                Object.values(datasetMarkers).flat().forEach(m => m.addTo(map));
+            } else {
+                datasetMarkers[selected].forEach(m => m.addTo(map));
+            }
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}Verify OTP - Epidemic Monitoring System{% endblock %}
+
+{% block content %}
+<div class="container auth-container">
+    <div class="auth-logo">
+        <i class="bi bi-shield-check text-primary" style="font-size: 3rem;"></i>
+        <h2 class="mt-2">Epidemic Monitoring</h2>
+    </div>
+    
+    <div class="card auth-card">
+        <div class="card-body">
+            <h3 class="card-title text-center mb-4">Verify OTP</h3>
+
+            <form method="POST" action="{{ url_for('verify_otp') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                
+                <div class="mb-3">
+                    <label for="otp" class="form-label">Enter OTP</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-key"></i></span>
+                        <input type="text" class="form-control" id="otp" name="otp" required autofocus>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-2"></i>Verify OTP
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Form validation
+        $('form').on('submit', function(e) {
+            let isValid = true;
+            
+            // Clear previous errors
+            $('.is-invalid').removeClass('is-invalid');
+            $('.invalid-feedback').remove();
+            
+            // Validate OTP
+            const otp = $('#otp').val().trim();
+            if (otp === '') {
+                isValid = false;
+                $('#otp').addClass('is-invalid');
+                $('<div class="invalid-feedback">OTP is required</div>').insertAfter('#otp');
+            }
+            
+            if (!isValid) {
+                e.preventDefault();
+                return false;
+            }
+            
+            return true;
+        });
+        
+        // Remove validation errors when typing
+        $('.form-control').on('input', function() {
+            $(this).removeClass('is-invalid');
+            $(this).next('.invalid-feedback').remove();
+        });
+    });
+</script>
+{% endblock %}

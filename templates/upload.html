@@ -92,7 +92,13 @@ endblock %} {% block content %}
                 placeholder="Briefly describe your dataset and its contents"
               ></textarea>
             </div>
-
+            <div class="mb-4">
+              <label for="sharing_status" class="form-label">Sharing Option</label>
+              <select class="form-select" id="sharing_status" name="sharing_status" required>
+                <option value="private" selected>Private (Only you can access)</option>
+                <option value="public">Public (Visible to everyone)</option>
+              </select>
+            </div>
             <div class="mt-4">
               <button
                 type="submit"
@@ -127,7 +133,6 @@ endblock %} {% block content %}
             <li><strong>date:</strong> Date in YYYY-MM-DD format</li>
             <li><strong>cases:</strong> Number of cases reported</li>
           </ul>
-
           <h4 class="h6 mb-2">Optional Columns</h4>
           <ul class="small">
             <li><strong>deaths:</strong> Number of deaths reported</li>
