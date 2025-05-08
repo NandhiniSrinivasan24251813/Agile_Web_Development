@@ -14,3 +14,6 @@ MarkupSafe
 click
 itsdangerous
 WTForms
+twilio
+flask_mail
+pyotp
