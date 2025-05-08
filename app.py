@@ -79,11 +79,6 @@ app.config['MAIL_PASSWORD'] = 'owoz huca itgc zvqj'  # Use an app-specific passw
 
 mail = Mail(app)
 
-# #configuration for sending otp
-# TWILIO_ACCOUNT_SID = 'ACa1aa3014d7009150d3c941915d925792'
-# TWILIO_AUTH_TOKEN = '12c9fded3eb8bd2d61471ab3d9bc27f7'
-# TWILIO_PHONE_NUMBER = '+61 405289536'  # Your Twilio number
-
 import pyotp
 
 def send_otp_email(user_email, otp):
@@ -154,6 +149,14 @@ def signup():
             db.session.add(new_user)
             db.session.commit()
 
+            otp = pyotp.TOTP(pyotp.random_base32(), digits=6).now()
+            print("otp is ------------->", otp)
+            new_user.otp = otp
+            send_otp_email(email, otp)
+
+            print("send_otp function is called and otp is send")
+            # db.session.flush()
+
             # Insert into AuditLog
             audit = AuditLog(
                 user_id=new_user.id,
@@ -162,17 +165,45 @@ def signup():
                 target_id=new_user.id,
                 details=f"User {new_user.username} signed up"
             )
+            send_welcome_email(email, username)
             db.session.add(audit)
             db.session.commit()
-
-            flash('Account created successfully! You can now log in.', 'success')
-            return redirect(url_for('login'))
+            session['user_id'] = new_user.id 
+            flash('Account created successfully! Welcome email and otp sent.', 'success')
+            # return redirect(url_for('login'))
+            return redirect(url_for('verify_otp'))
         except Exception as e:
             db.session.rollback()
             flash('An error occurred. Please try again.', 'error')
             print(f"Error during signup: {str(e)}")
 
     return render_template('signup.html')
+
+@app.route('/verify-otp', methods=['GET', 'POST'])
+def verify_otp():
+    if request.method == 'POST':
+        # Get OTP from form
+        entered_otp = request.form.get('otp')
+        
+        # Retrieve user ID from the session
+        user_id = session.get('user_id')
+        
+        if user_id:
+            # Fetch user based on the stored user ID
+            user = User.query.get(user_id)
+            
+            if user and user.otp == entered_otp:
+                login_user(user)
+                flash('OTP verified. You are now logged in.', 'success')
+                return redirect(url_for('dashboard'))
+            else:
+                flash('Invalid OTP. Please try again.', 'error')
+        else:
+            flash('No user ID found in session. Please start the OTP process again.', 'error')
+
+    return render_template('verify_otp.html')
+
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -489,9 +520,6 @@ def edit_profile():
     return render_template('edit_profile.html', form=form)
 
 
-
-
-
 @app.route('/dashboard')
 @login_required
 def dashboard():
@@ -507,6 +535,45 @@ def dashboard():
     return render_template('dashboard.html', 
                           user_datasets=user_datasets,
                           shared_datasets=shared_datasets)
+
+
+@app.route('/explore')
+def explore_global_map():
+    public_datasets = Dataset.query.filter_by(sharing_status='public').all()
+    print(f"Count of public datasets: {len(public_datasets)}")
+    all_map_data = []
+
+    for dataset in public_datasets:
+        try:
+            data = json.loads(dataset.data_json)  # data is expected to be a list of dicts (rows)
+        except Exception as e:
+            print(f"Failed to load JSON for dataset {dataset.id}: {e}")
+            continue
+
+        if not isinstance(data, list):
+            continue
+
+        # Check if 'latitude' and 'longitude' keys are present in the first record
+        if len(data) > 0 and all(k in data[0] for k in ['latitude', 'longitude']):
+            for row in data:
+                lat = row.get('latitude')
+                lon = row.get('longitude')
+                if lat and lon:
+                    all_map_data.append({
+                        'latitude': lat,
+                        'longitude': lon,
+                        'dataset_name': dataset.name,
+                        'cases': row.get('cases'),
+                        'deaths': row.get('deaths'),
+                        'recovered': row.get('recovered')
+                    })
+    print(all_map_data)
+    return render_template("explore.html", combined_map_data=json.dumps(all_map_data))
+
+
+
+
+
 
 # ---------------------------------------------------------
 # Upload Route
@@ -540,7 +607,8 @@ def upload():
                     description=request.form.get('description', ''),
                     original_filename=filename,
                     original_format=file_format,
-                    user_id=current_user.id
+                    user_id=current_user.id,
+                    sharing_status = request.form.get('sharing_status', 'private')
                 )
                 
                 # Try using the new unified storage approach
@@ -741,40 +809,43 @@ def export_dataset(dataset_id):
         flash(f'Error exporting dataset: {str(e)}', 'error')
         return redirect(url_for('visualize', dataset_id=dataset_id))
 
+
 # ---------------------------------------------------------
 # Visualize Route
 # ---------------------------------------------------------
+
+
 @app.route('/visualize/<int:dataset_id>')
-@login_required
 def visualize(dataset_id):
     dataset = Dataset.query.get_or_404(dataset_id)
-    
-    # Check if user has permission to view this dataset
-    is_owner = dataset.user_id == current_user.id
-    is_shared = SharedDataset.query.filter_by(dataset_id=dataset_id, shared_with_id=current_user.id).first() is not None
+
+    # Check access permissions
+    is_owner = current_user.is_authenticated and dataset.user_id == current_user.id
+    is_shared = current_user.is_authenticated and SharedDataset.query.filter_by(
+        dataset_id=dataset_id,
+        shared_with_id=current_user.id
+    ).first() is not None
     is_public = dataset.sharing_status == 'public'
-    
+
     if not (is_owner or is_shared or is_public):
-        flash('You do not have permission to view this dataset', 'error')
-        return redirect(url_for('dashboard'))
-    
-    # Get the records using the new unified storage approach
+        if current_user.is_authenticated:
+            flash('You do not have permission to view this dataset', 'error')
+            return redirect(url_for('dashboard'))
+        else:
+            abort(403)
+
+    # Process records for visualization
     records = dataset.get_data()
-    
-    # Prepare map data
-    map_data = []
-    trend_data = []
-    
+    map_data, trend_data = [], []
+
     if records:
-        # Process records for map visualization
         for record in records:
-            if 'latitude' in record and 'longitude' in record and record['latitude'] and record['longitude']:
+            if 'latitude' in record and 'longitude' in record:
                 try:
                     lat = float(record['latitude'])
                     lng = float(record['longitude'])
-                    
                     if -90 <= lat <= 90 and -180 <= lng <= 180:
-                        map_point = {
+                        map_data.append({
                             'location': record.get('location', 'Unknown'),
                             'latitude': lat,
                             'longitude': lng,
@@ -782,86 +853,63 @@ def visualize(dataset_id):
                             'deaths': record.get('deaths', 0),
                             'recovered': record.get('recovered', 0),
                             'date': record.get('date')
-                        }
-                        map_data.append(map_point)
+                        })
                 except (ValueError, TypeError):
                     pass
-        
-        # Group records by date for trend visualization
+
+        # Group records by date
         date_groups = {}
         for record in records:
-            date_str = record.get('date', 'Unknown')
-            if date_str not in date_groups:
-                date_groups[date_str] = {
-                    'date': date_str,
-                    'cases': 0,
-                    'deaths': 0,
-                    'recovered': 0
-                }
-            
-            date_groups[date_str]['cases'] += record.get('cases', 0)
-            date_groups[date_str]['deaths'] += record.get('deaths', 0)
-            date_groups[date_str]['recovered'] += record.get('recovered', 0)
-        
-        # Convert date groups to sorted list
+            date = record.get('date', 'Unknown')
+            date_groups.setdefault(date, {'date': date, 'cases': 0, 'deaths': 0, 'recovered': 0})
+            date_groups[date]['cases'] += record.get('cases', 0)
+            date_groups[date]['deaths'] += record.get('deaths', 0)
+            date_groups[date]['recovered'] += record.get('recovered', 0)
         trend_data = sorted(date_groups.values(), key=lambda x: x['date'])
-    
-    # Get preview data (first 10 records)
+
     preview_data = records[:10] if records else []
-    
-    # Determine columns to show
-    # preview_columns = ['location', 'date', 'latitude', 'longitude', 'cases', 'deaths', 'recovered']
     preview_columns = ['location', 'date', 'cases', 'deaths', 'recovered']
     numeric_fields = ['cases', 'deaths', 'recovered']
-    
-    # Add columns for additional data if present
-    if any('tested' in record for record in preview_data):
+
+    if any('tested' in r for r in preview_data):
         preview_columns.append('tested')
         numeric_fields.append('tested')
-    
-    if any('hospitalized' in record for record in preview_data):
+    if any('hospitalized' in r for r in preview_data):
         preview_columns.append('hospitalized')
         numeric_fields.append('hospitalized')
-    
-    # Calculate summary statistics
-    summary_stats = {}
-    date_range = dataset.date_range_start.strftime('%Y-%m-%d') + ' to ' + dataset.date_range_end.strftime('%Y-%m-%d') if dataset.date_range_start and dataset.date_range_end else "N/A"
-    visualization_title = dataset.name
-    
-    # Add summary statistics
-    if records:
-        total_cases = sum(record.get('cases', 0) for record in records)
-        total_deaths = sum(record.get('deaths', 0) for record in records)
-        total_recovered = sum(record.get('recovered', 0) for record in records)
-        
-        summary_stats = {
-            'total cases': f"{total_cases:,}",
-            'total deaths': f"{total_deaths:,}",
-            'total recovered': f"{total_recovered:,}",
-            'case fatality rate': f"{(total_deaths / total_cases * 100):.2f}%" if total_cases > 0 else "N/A",
-            'recovery rate': f"{(total_recovered / total_cases * 100):.2f}%" if total_cases > 0 else "N/A"
-        }
-    
-    trend_analysis = "Data shows fluctuations in case numbers over time with notable peaks during outbreak periods."
-    key_observations = [
-        "Highest case numbers were reported in densely populated areas.",
-        "Recovery rates improved significantly in later time periods.",
-        "Regional differences in case fatality rates may indicate varying healthcare capacities."
-    ]
-    
-    return render_template('visualize.html',
-                         dataset=dataset,
-                         map_data=json.dumps(map_data),
-                         trend_data=json.dumps(trend_data),
-                         preview_data=preview_data,
-                         preview_columns=preview_columns,
-                         numeric_fields=numeric_fields,
-                         summary_stats=summary_stats,
-                         columns=numeric_fields,
-                         date_range=date_range,
-                         visualization_title=visualization_title,
-                         trend_analysis=trend_analysis,
-                         key_observations=key_observations)
+
+    total_cases = sum(r.get('cases', 0) for r in records)
+    total_deaths = sum(r.get('deaths', 0) for r in records)
+    total_recovered = sum(r.get('recovered', 0) for r in records)
+    summary_stats = {
+        'total cases': f"{total_cases:,}",
+        'total deaths': f"{total_deaths:,}",
+        'total recovered': f"{total_recovered:,}",
+        'case fatality rate': f"{(total_deaths / total_cases * 100):.2f}%" if total_cases else "N/A",
+        'recovery rate': f"{(total_recovered / total_cases * 100):.2f}%" if total_cases else "N/A"
+    }
+
+    date_range = f"{dataset.date_range_start:%Y-%m-%d} to {dataset.date_range_end:%Y-%m-%d}" if dataset.date_range_start and dataset.date_range_end else "N/A"
+
+    return render_template(
+        'visualize.html',
+        dataset=dataset,
+        map_data=json.dumps(map_data),
+        trend_data=json.dumps(trend_data),
+        preview_data=preview_data,
+        preview_columns=preview_columns,
+        numeric_fields=numeric_fields,
+        summary_stats=summary_stats,
+        columns=numeric_fields,
+        date_range=date_range,
+        visualization_title=dataset.name,
+        trend_analysis="Data shows fluctuations in case numbers over time with notable peaks during outbreak periods.",
+        key_observations=[
+            "Highest case numbers were reported in densely populated areas.",
+            "Recovery rates improved significantly in later time periods.",
+            "Regional differences in case fatality rates may indicate varying healthcare capacities."
+        ]
+    )
 
 # Add a debug endpoint to inspect file content
 @app.route('/debug_file/<int:dataset_id>')
