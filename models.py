@@ -65,7 +65,7 @@ class Dataset(db.Model):
 
     # Keep the original relationships for backward compatibility during migration
     epidemic_records = db.relationship('EpidemicRecord', backref='dataset', lazy=True, cascade="all, delete-orphan")
-    shared_with = db.relationship('SharedDataset', backref='dataset', lazy=True, cascade="all, delete-orphan")
+    shared_with = db.relationship('SharedDataset', backref='dataset_shared_with', lazy=True, cascade="all, delete-orphan")
     
     def get_data(self):
         """Return data as a Python object from stored JSON"""
@@ -166,17 +166,27 @@ class EpidemicRecord(db.Model):
     country = db.Column(db.String(100))
 
 
-class SharedDataset(db.Model):
-    __tablename__ = 'shared_datasets'
+# class SharedDataset(db.Model):
+#     __tablename__ = 'shared_datasets'
     
+#     id = db.Column(db.Integer, primary_key=True)
+#     dataset_id = db.Column(db.Integer, db.ForeignKey('datasets.id'), nullable=False)
+#     shared_with_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+#     share_date = db.Column(db.DateTime, default=datetime.utcnow)
+#     access_token = db.Column(db.String(255))
+#     can_download = db.Column(db.Boolean, default=False)
+#     expires_at = db.Column(db.DateTime)
+
+class SharedDataset(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     dataset_id = db.Column(db.Integer, db.ForeignKey('datasets.id'), nullable=False)
+    shared_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     shared_with_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    share_date = db.Column(db.DateTime, default=datetime.utcnow)
-    access_token = db.Column(db.String(255))
-    can_download = db.Column(db.Boolean, default=False)
-    expires_at = db.Column(db.DateTime)
 
+    dataset = db.relationship('Dataset', backref='shared_dataset_link')
+    shared_by = db.relationship('User', foreign_keys=[shared_by_id])
+    #silence the warning by telling SQLAlchemy they’re intentionally overlapping:
+    shared_with = db.relationship('User', foreign_keys=[shared_with_id], overlaps="shared_user,shared_datasets")
 
 class PasswordResetToken(db.Model):
     __tablename__ = 'password_reset_tokens'

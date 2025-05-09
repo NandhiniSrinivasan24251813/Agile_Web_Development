@@ -15,7 +15,7 @@
             </a>
         </div>
     </div>
-    
+
     <div class="row mt-4">
         <div class="col-md-8">
             <div class="card">
@@ -69,6 +69,10 @@
                                                 <a href="{{ url_for('visualize', dataset_id=dataset.id) }}" class="btn btn-primary">
                                                     <i class="bi bi-graph-up"></i> View
                                                 </a>
+                                                <!-- Share Button triggers modal -->
+                                                <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#shareModal{{ dataset.id }}">
+                                                    <i class="bi bi-share"></i> Share
+                                                </button>
                                                 <button type="button" class="btn btn-outline-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
                                                     <span class="visually-hidden">Toggle Dropdown</span>
                                                 </button>
@@ -87,6 +91,7 @@
                                             </div>
                                         </td>
                                     </tr>
+
                                     {% endfor %}
                                 </tbody>
                             </table>
@@ -112,9 +117,33 @@
                 <div class="card-body">
                     {% if shared_datasets %}
                         <ul class="list-group">
-                            {% for shared in shared_datasets %}
-                                <li class="list-group-item">{{ shared.dataset.name }}</li>
-                            {% endfor %}
+                            {% for dataset in shared_datasets %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ dataset.name }}</strong>
+                                            <div class="small text-muted">{{ dataset.description|truncate(50) }}</div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ dataset.file_type|capitalize }}</span>
+                                            {% if dataset.has_geo %}
+                                            <span class="badge bg-info">Geo</span>
+                                            {% endif %}
+                                            {% if dataset.has_time %}
+                                            <span class="badge bg-secondary">Time</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-nowrap">{{ dataset.upload_date.strftime('%Y-%m-%d') }}</td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{{ url_for('visualize', dataset_id=dataset.id) }}" class="btn btn-primary">
+                                                    <i class="bi bi-graph-up"></i> View
+                                                </a>
+                                                
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                    {% endfor %}
                         </ul>
                     {% else %}
                         <div class="text-center py-4">
