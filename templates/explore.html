@@ -40,7 +40,7 @@
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        const combinedMapData = {{ combined_map_data | safe }};
+        const combinedMapData = {{ combined_map_data | tojson | safe }};
         const datasetFilter = document.getElementById("dataset-filter");
 
         // Build unique dataset list

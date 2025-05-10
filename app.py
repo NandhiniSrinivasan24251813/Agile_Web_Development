@@ -26,7 +26,16 @@ from utils import DataConverter
 from twilio.rest import Client
 import random
 from flask import session
+from flask import Flask, Blueprint
+from flask_wtf import CSRFProtect
+from itertools import chain
+app = Flask(__name__)
+csrf = CSRFProtect(app)
 
+api_blueprint = Blueprint('api', __name__)
+csrf.exempt(api_blueprint)
+
+app.register_blueprint(api_blueprint)
 
 # Initialization
 app = Flask(__name__)
@@ -524,13 +533,25 @@ def edit_profile():
 @login_required
 def dashboard():
     # Quickfix 02/05/2025: Get datasets for the current user
+    #we need to combine the users own datasets with the shared datasets
+    shared_entries = SharedDataset.query.filter_by(shared_with_id=current_user.id).all()
+
+    # Extract dataset IDs from those entries
+    shared_dataset_ids = [entry.dataset_id for entry in shared_entries]
+
+    #Query the actual datasets
+    shared_datasets = Dataset.query.filter(Dataset.id.in_(shared_dataset_ids)).all()
+
     user_datasets = Dataset.query.filter_by(user_id=current_user.id).order_by(Dataset.upload_date.desc()).all()
     
+
+    # # Combine both lists
+    # combined_datasets = list(chain(user_datasets, shared_datasets))
     # Print for debugging
     print(f"Found {len(user_datasets)} datasets for user {current_user.username}")
     
-    # Later!
-    shared_datasets = []  # Later!
+    # # Later!
+    # shared_datasets = []  # Later!
     
     return render_template('dashboard.html', 
                           user_datasets=user_datasets,
@@ -983,10 +1004,30 @@ def delete_dataset(dataset_id):
         flash(f'Error deleting dataset: {str(e)}', 'error')
     return redirect(url_for('dashboard'))
 
-# @app.route('/map-test')
-# @login_required
-# def map_test():
-#     return render_template('map-test.html')
+@app.route('/share/<int:dataset_id>', methods=['POST'])
+@login_required
+# @csrf.exempt
+def share_dataset(dataset_id):
+    email = request.form['email']
+    permission = request.form.get('permission', 'read')
+    
+    # Find the user by email
+    user_to_share = User.query.filter_by(email=email).first()
+    if user_to_share:
+        shared = SharedDataset(
+            # owner_id=current_user.id,
+            shared_by_id = current_user.id,
+            shared_with_id=user_to_share.id,
+            dataset_id=dataset_id,
+        )
+        db.session.add(shared)
+        db.session.commit()
+        flash(f"Dataset shared with {email}.", "success")
+    else:
+        flash("User not found.", "danger")
+    
+    return redirect(url_for('dashboard'))
+
 
 # --------------------------------------------
 # Helper Functions
