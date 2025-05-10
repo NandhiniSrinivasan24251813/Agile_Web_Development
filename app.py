@@ -20,15 +20,17 @@ from queue import Queue
 import time
 import logging
 from flask import abort, flash, redirect, url_for
-# Custom imports
-from data_bridge import DataBridge
-from utils import DataConverter
 from twilio.rest import Client
 import random
 from flask import session
 from flask import Flask, Blueprint
 from flask_wtf import CSRFProtect
 from itertools import chain
+# Custom imports
+from data_bridge import DataBridge
+from utils import DataConverter
+
+
 app = Flask(__name__)
 csrf = CSRFProtect(app)
 
