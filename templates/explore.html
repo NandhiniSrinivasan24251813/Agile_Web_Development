@@ -4,10 +4,13 @@
 
 {% block extra_css %}
 <!-- Leaflet CSS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+      crossorigin=""/>
 <!-- Leaflet Marker Cluster CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+<!-- Custom styles for explore page -->
 <style>
     #map {
         height: 500px;
@@ -15,417 +18,853 @@
         border-radius: 12px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         margin-bottom: 1rem;
+        position: relative;
+        overflow: hidden;
     }
     
-    .debug-info {
-        background-color: var(--card-bg);
-        border: 1px solid var(--border-color);
+    /* Force map container styling */
+    .leaflet-container {
+        background: #fff;
+    }
+    
+    .map-controls {
+        margin-bottom: 1rem;
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .dataset-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .dataset-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .legend {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        line-height: 1.4;
+        color: #333;
+        font-size: 14px;
+    }
+    
+    [data-theme="dark"] .legend {
+        background: #1e1e1e;
+        color: white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin: 5px 0;
+    }
+    
+    .legend-color {
+        width: 20px;
+        height: 20px;
+        margin-right: 8px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    
+    .stats-card {
+        background: var(--card-bg);
         border-radius: 8px;
         padding: 1rem;
         margin-bottom: 1rem;
-        font-family: monospace;
-        font-size: 0.9rem;
-        max-height: 200px;
-        overflow-y: auto;
+        border: 1px solid var(--border-color);
     }
     
-    .debug-toggle {
-        position: fixed;
-        bottom: 20px;
-        left: 20px;
-        z-index: 1000;
+    .filter-section {
+        background: var(--card-bg);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border: 1px solid var(--border-color);
+    }
+    
+    .metric-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .metric-cases { background-color: rgba(52, 152, 219, 0.1); color: #3498db; }
+    .metric-deaths { background-color: rgba(231, 76, 60, 0.1); color: #e74c3c; }
+    .metric-recovered { background-color: rgba(39, 174, 96, 0.1); color: #27ae60; }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: var(--text-tertiary);
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        display: block;
+    }
+    
+    /* Force proper map rendering */
+    .leaflet-map-pane {
+        left: 0;
+        top: 0;
+    }
+    
+    .leaflet-tile {
+        width: 256px;
+        height: 256px;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
-    <!-- Debug Toggle Button -->
-    <button id="debug-toggle" class="btn btn-sm btn-secondary debug-toggle">
-        <i class="bi bi-bug"></i> Debug Info
-    </button>
-    
-    <!-- Debug Info Panel -->
-    <div id="debug-panel" class="debug-info" style="display: none;">
-        <h6>Debug Information</h6>
-        <div id="debug-content"></div>
-    </div>
-    
     <div class="row">
-        <div class="col-12">
-            <h1>Explore Public Datasets</h1>
-            <p class="text-muted">Discover and analyze public epidemic data from around the world</p>
-            
-            <!-- Data Status -->
-            <div class="alert alert-info" id="data-status">
-                <strong>Status:</strong> <span id="status-text">Loading...</span>
-            </div>
-        </div>
-    </div>
-    
-    <div class="row">
+        <!-- Main Map and Controls -->
         <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h1>Explore Public Datasets</h1>
+                    <p class="text-muted">Discover and analyze public epidemic data from around the world</p>
+                </div>
+                <div>
+                    <button class="btn btn-outline-primary" id="toggleFullscreen">
+                        <i class="bi bi-arrows-fullscreen"></i> Fullscreen Map
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Map Controls -->
+            <div class="filter-section">
+                <div class="map-controls">
+                    <div>
+                        <label for="dataset-filter" class="form-label">Filter by Dataset:</label>
+                        <select id="dataset-filter" class="form-select" style="width: auto; display: inline-block;">
+                            <option value="all">Show All Datasets</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="metric-filter" class="form-label">Show:</label>
+                        <select id="metric-filter" class="form-select" style="width: auto; display: inline-block;">
+                            <option value="cases">Cases</option>
+                            <option value="deaths">Deaths</option>
+                            <option value="recovered">Recovered</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="date-filter" class="form-label">Date Range:</label>
+                        <input type="date" id="date-start" class="form-control" style="width: auto; display: inline-block;">
+                        <span>to</span>
+                        <input type="date" id="date-end" class="form-control" style="width: auto; display: inline-block;">
+                    </div>
+                </div>
+            </div>
+            
             <!-- Map Container -->
             <div id="map"></div>
         </div>
         
+        <!-- Sidebar with Dataset Information -->
         <div class="col-lg-4">
-            <!-- Raw Data Preview -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5>Raw Data Preview</h5>
+            <!-- Global Statistics -->
+            <div class="stats-card">
+                <h5>Global Statistics</h5>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>Total Datasets:</span>
+                    <strong id="total-datasets">0</strong>
                 </div>
-                <div class="card-body">
-                    <pre id="raw-data-preview" style="max-height: 200px; overflow-y: auto;">Loading...</pre>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>Total Data Points:</span>
+                    <strong id="total-datapoints">0</strong>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>Countries Covered:</span>
+                    <strong id="countries-covered">0</strong>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>Date Range:</span>
+                    <strong id="global-date-range">-</strong>
                 </div>
             </div>
             
-            <!-- Processed Data Info -->
+            <!-- Available Datasets -->
             <div class="card">
-                <div class="card-header">
-                    <h5>Processed Data Info</h5>
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Available Datasets</h5>
+                    <span class="badge bg-primary" id="dataset-count">0</span>
                 </div>
-                <div class="card-body">
-                    <div id="processed-data-info">Loading...</div>
+                <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                    <div id="dataset-list">
+                        <div class="empty-state">
+                            <i class="bi bi-database"></i>
+                            <p>Loading datasets...</p>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </div>
-    
-    <!-- Query Details -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Backend Query Details</h5>
-                </div>
-                <div class="card-body">
-                    <p><strong>Query SQL:</strong></p>
-                    <code>
-                        SELECT d.*, u.username 
-                        FROM datasets d 
-                        JOIN users u ON d.user_id = u.id 
-                        WHERE d.sharing_status = 'public'
-                    </code>
-                    <p class="mt-3"><strong>Data Processing:</strong></p>
-                    <ul>
-                        <li>Check if datasets have proper data_json field</li>
-                        <li>Validate latitude/longitude values</li>
-                        <li>Ensure dataset_name field is present</li>
-                    </ul>
+            
+            <!-- Legend -->
+            <div class="mt-3">
+                <div class="legend">
+                    <h6>Map Legend</h6>
+                    <div id="map-legend">
+                        <p class="text-muted">Select a metric to see the legend</p>
+                    </div>
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> Circle size and color intensity represent the magnitude of selected metric
+                        </small>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Hidden data elements -->
-<div id="combined-map-data" style="display: none;">{{ combined_map_data | tojson | safe }}</div>
-<div id="backend-debug" style="display: none;">
-    {{ public_datasets_count | default('0') }} public datasets found
+<!-- Dataset Modal -->
+<div class="modal fade" id="datasetModal" tabindex="-1" aria-labelledby="datasetModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="datasetModalLabel">Dataset Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="dataset-details-content">
+                    <!-- Dataset details will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" id="view-dataset-btn" class="btn btn-primary">View Dataset</a>
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- Hidden data element -->
+<script type="application/json" id="combined-map-data">{{ combined_map_data | tojson | safe }}</script>
 {% endblock %}
 
 {% block extra_js %}
 <!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""></script>
 <!-- Leaflet Marker Cluster -->
 <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
 <script>
-    // Debug mode
-    let debugMode = true;
-    let debugLog = [];
-    
-    function logDebug(message, data = null) {
-        const timestamp = new Date().toISOString().substring(11, 23);
-        const logEntry = `[${timestamp}] ${message}`;
-        debugLog.push(logEntry);
-        
-        if (data) {
-            debugLog.push('  Data: ' + JSON.stringify(data, null, 2));
-        }
-        
-        updateDebugPanel();
-        console.log(logEntry, data);
-    }
-    
-    function updateDebugPanel() {
-        const debugContent = document.getElementById('debug-content');
-        if (debugContent) {
-            debugContent.innerHTML = debugLog.slice(-20).join('\n');
-        }
-    }
-    
-    // Debug toggle
-    document.getElementById('debug-toggle').addEventListener('click', function() {
-        const panel = document.getElementById('debug-panel');
-        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-    });
-    
     // Global variables
     let map;
+    let markers = L.markerClusterGroup();
+    let datasetMarkers = {};
     let combinedMapData = [];
+    let datasetInfo = {}; // Store dataset metadata
     
-    // Start debugging
+    // Initialize map when page loads
     document.addEventListener('DOMContentLoaded', function() {
-        logDebug('Starting initialization...');
+        console.log('Starting initialization...');
         
-        // Check backend data
-        const backendDebug = document.getElementById('backend-debug');
-        if (backendDebug) {
-            logDebug('Backend debug info:', backendDebug.textContent);
-        }
-        
-        // Parse the data
+        // Parse the data passed from the backend
         try {
             const dataElement = document.getElementById('combined-map-data');
-            if (!dataElement) {
-                logDebug('ERROR: Data element not found');
-                showStatus('Data element not found', 'error');
-                return;
-            }
-            
-            const rawData = dataElement.textContent.trim();
-            logDebug('Raw data length:', rawData.length);
-            logDebug('Raw data first 500 chars:', rawData.substring(0, 500));
-            
-            // Show raw data preview
-            document.getElementById('raw-data-preview').textContent = rawData.substring(0, 1000) + '...';
-            
-            if (!rawData || rawData === 'None' || rawData === 'null' || rawData === '[]') {
-                logDebug('No data provided or empty array');
-                showStatus('No public datasets available', 'warning');
-                combinedMapData = [];
-            } else {
-                combinedMapData = JSON.parse(rawData);
-                logDebug('Parsed data successfully. Type:', typeof combinedMapData);
-                logDebug('Data is array?', Array.isArray(combinedMapData));
-                logDebug('Data length:', combinedMapData ? combinedMapData.length : 'undefined');
+            if (dataElement) {
+                const rawData = dataElement.textContent.trim();
+                console.log('Raw data found, length:', rawData.length);
                 
-                if (Array.isArray(combinedMapData) && combinedMapData.length > 0) {
-                    logDebug('First data point:', combinedMapData[0]);
-                    showStatus(`Found ${combinedMapData.length} data points`, 'success');
+                if (rawData && rawData !== 'None' && rawData !== 'null') {
+                    // Parse the JSON data
+                    combinedMapData = JSON.parse(rawData);
+                    
+                    // Handle case where data is double-encoded as a string
+                    if (typeof combinedMapData === 'string') {
+                        console.log('Data is double-encoded, parsing again...');
+                        combinedMapData = JSON.parse(combinedMapData);
+                    }
+                    
+                    console.log('Parsed data successfully. Points:', combinedMapData.length);
+                    console.log('First data point:', combinedMapData[0]);
                 } else {
-                    logDebug('Data is empty or not an array');
-                    showStatus('Data is empty or invalid format', 'warning');
+                    console.log('No data provided or data is null');
+                    combinedMapData = [];
                 }
+            } else {
+                console.error('Data element not found');
+                combinedMapData = [];
             }
         } catch (error) {
-            logDebug('ERROR parsing data:', error.toString());
-            showStatus('Error parsing data: ' + error.message, 'error');
+            console.error('Error parsing map data:', error);
+            console.error('Raw data that failed to parse:', document.getElementById('combined-map-data').textContent);
             combinedMapData = [];
         }
         
-        // Update processed data info
-        updateProcessedDataInfo();
+        // Ensure combinedMapData is an array
+        if (!Array.isArray(combinedMapData)) {
+            console.error('combinedMapData is not an array, using empty array');
+            combinedMapData = [];
+        }
         
-        // Initialize map
         initializeMap();
     });
     
-    function showStatus(message, type) {
-        const statusElement = document.getElementById('status-text');
-        const alertElement = document.getElementById('data-status');
+    function initializeMap() {
+        console.log('Initializing map with data points:', combinedMapData.length);
         
-        statusElement.textContent = message;
+        // Create the map with longer timeout
+        map = L.map('map', {
+            preferCanvas: true,
+            maxZoom: 18,
+            minZoom: 2
+        }).setView([30, 0], 2);
         
-        // Update alert class
-        alertElement.className = 'alert';
-        switch(type) {
-            case 'success':
-                alertElement.classList.add('alert-success');
+        // Add multiple tile layer options for fallback
+        const tileLayers = [
+            {
+                name: 'OpenStreetMap',
+                url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                attribution: '© OpenStreetMap contributors',
+                subdomains: ['a', 'b', 'c']
+            },
+            {
+                name: 'CartoDB',
+                url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+                attribution: '© OpenStreetMap © CartoDB',
+                subdomains: ['a', 'b', 'c']
+            },
+            {
+                name: 'Stamen',
+                url: 'https://stamen-tiles-{s}.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}{r}.png',
+                attribution: '© Stamen',
+                subdomains: ['a', 'b', 'c']
+            }
+        ];
+        
+        // Try to add each tile layer with error handling
+        let tileLayerAdded = false;
+        for (const tileLayer of tileLayers) {
+            try {
+                console.log(`Trying to load ${tileLayer.name} tiles...`);
+                const layer = L.tileLayer(tileLayer.url, {
+                    attribution: tileLayer.attribution,
+                    subdomains: tileLayer.subdomains,
+                    maxZoom: 19,
+                    crossOrigin: true,
+                    errorTileUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="%23F5F5F5"/></svg>'
+                });
+                
+                layer.addTo(map);
+                tileLayerAdded = true;
+                console.log(`${tileLayer.name} tiles loaded successfully`);
                 break;
-            case 'warning':
-                alertElement.classList.add('alert-warning');
-                break;
-            case 'error':
-                alertElement.classList.add('alert-danger');
-                break;
-            default:
-                alertElement.classList.add('alert-info');
+            } catch (error) {
+                console.error(`Failed to load ${tileLayer.name} tiles:`, error);
+            }
+        }
+        
+        // Fallback to a simple basemap if all tile layers fail
+        if (!tileLayerAdded) {
+            console.log('All tile layers failed, using fallback...');
+            L.tileLayer('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="%23F5F5F5"/><text x="128" y="128" text-anchor="middle" fill="%23333">Tile Error</text></svg>', {
+                attribution: 'Fallback Map'
+            }).addTo(map);
+        }
+        
+        // Force map to render properly
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 100);
+        
+        // Process and add markers
+        processDatasets();
+        
+        // Add markers to map
+        map.addLayer(markers);
+        
+        // Set up event listeners
+        setupEventListeners();
+        
+        // Update statistics
+        updateGlobalStatistics();
+        
+        // Populate dataset list
+        populateDatasetList();
+        
+        // Create initial legend
+        updateLegend();
+        
+        // Center map on data if available
+        if (combinedMapData.length > 0) {
+            console.log('Fitting map to data bounds...');
+            const group = new L.featureGroup(Object.values(datasetMarkers).flat());
+            if (group.getLayers().length > 0 && group.getBounds().isValid()) {
+                map.fitBounds(group.getBounds().pad(0.1));
+            } else {
+                console.log('No valid bounds found, keeping default view');
+            }
+        } else {
+            console.log('No data to fit map to');
+        }
+        
+        // Show empty state if no data
+        if (combinedMapData.length === 0) {
+            showEmptyState();
         }
     }
     
-    function updateProcessedDataInfo() {
-        const infoDiv = document.getElementById('processed-data-info');
-        
-        if (!Array.isArray(combinedMapData)) {
-            infoDiv.innerHTML = '<div class="alert alert-danger">Data is not an array</div>';
-            return;
-        }
+    function processDatasets() {
+        // Clear existing markers
+        markers.clearLayers();
+        datasetMarkers = {};
+        datasetInfo = {};
         
         if (combinedMapData.length === 0) {
-            infoDiv.innerHTML = '<div class="alert alert-warning">No data points found</div>';
+            console.log('No data to process');
             return;
         }
         
-        // Analyze data
-        let validPoints = 0;
-        let invalidPoints = 0;
-        let datasetNames = new Set();
-        let missingFields = {
-            latitude: 0,
-            longitude: 0,
-            dataset_name: 0,
-            cases: 0
-        };
-        
-        combinedMapData.forEach(point => {
-            if (point.latitude && point.longitude && !isNaN(point.latitude) && !isNaN(point.longitude)) {
-                validPoints++;
-            } else {
-                invalidPoints++;
-            }
-            
-            if (point.dataset_name) {
-                datasetNames.add(point.dataset_name);
-            } else {
-                missingFields.dataset_name++;
-            }
-            
-            // Check other fields
-            if (!point.latitude) missingFields.latitude++;
-            if (!point.longitude) missingFields.longitude++;
-            if (!point.cases && point.cases !== 0) missingFields.cases++;
-        });
-        
-        infoDiv.innerHTML = `
-            <ul class="list-group list-group-flush">
-                <li class="list-group-item d-flex justify-content-between">
-                    <span>Total Points:</span>
-                    <span>${combinedMapData.length}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between">
-                    <span>Valid Coordinates:</span>
-                    <span class="text-success">${validPoints}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between">
-                    <span>Invalid Coordinates:</span>
-                    <span class="text-danger">${invalidPoints}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between">
-                    <span>Datasets:</span>
-                    <span>${datasetNames.size}</span>
-                </li>
-                <li class="list-group-item">
-                    <strong>Missing Fields:</strong>
-                    <ul>
-                        <li>Latitude: ${missingFields.latitude}</li>
-                        <li>Longitude: ${missingFields.longitude}</li>
-                        <li>Dataset Name: ${missingFields.dataset_name}</li>
-                        <li>Cases: ${missingFields.cases}</li>
-                    </ul>
-                </li>
-            </ul>
-        `;
-    }
-    
-    function initializeMap() {
-        logDebug('Initializing map...');
-        
-        try {
-            // Create the map
-            map = L.map('map').setView([20, 0], 2);
-            
-            // Add tile layer
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors',
-                maxZoom: 19
-            }).addTo(map);
-            
-            logDebug('Map created successfully');
-            
-            // Add markers if data exists
-            if (Array.isArray(combinedMapData) && combinedMapData.length > 0) {
-                addMarkersToMap();
-            } else {
-                logDebug('No valid data to add markers');
-                // Add a default marker for testing
-                const testMarker = L.marker([0, 0]).addTo(map);
-                testMarker.bindPopup("Map is working - this is a test marker");
-            }
-            
-        } catch (error) {
-            logDebug('ERROR initializing map:', error.toString());
-            showStatus('Error initializing map: ' + error.message, 'error');
-        }
-    }
-    
-    function addMarkersToMap() {
-        logDebug('Adding markers to map...');
-        
-        let addedMarkers = 0;
-        let skippedMarkers = 0;
-        
+        // Group data by dataset
+        const datasetGroups = {};
         combinedMapData.forEach((point, index) => {
-            // Validate point
+            // Skip invalid points
             if (!point.latitude || !point.longitude || isNaN(point.latitude) || isNaN(point.longitude)) {
-                skippedMarkers++;
+                console.warn(`Skipping point ${index} with invalid coordinates:`, point);
                 return;
             }
             
-            try {
-                // Create marker
-                const marker = L.circleMarker([point.latitude, point.longitude], {
-                    radius: 8,
-                    fillColor: '#3498db',
-                    color: '#000',
-                    weight: 1,
-                    opacity: 1,
-                    fillOpacity: 0.8
-                });
-                
-                // Add popup
-                const popupContent = `
-                    <div>
-                        <h6>${point.location || 'Unknown Location'}</h6>
-                        <p><strong>Dataset:</strong> ${point.dataset_name || 'Unnamed'}</p>
-                        <p><strong>Cases:</strong> ${point.cases || 0}</p>
-                        <p><strong>Deaths:</strong> ${point.deaths || 0}</p>
-                        <p><strong>Coordinates:</strong> ${point.latitude}, ${point.longitude}</p>
-                    </div>
-                `;
-                
-                marker.bindPopup(popupContent);
-                marker.addTo(map);
-                addedMarkers++;
-                
-                // Log first few markers for debugging
-                if (addedMarkers <= 3) {
-                    logDebug(`Marker ${addedMarkers} added:`, {
-                        lat: point.latitude,
-                        lng: point.longitude,
-                        location: point.location
-                    });
+            const datasetName = point.dataset_name || 'Unnamed Dataset';
+            
+            if (!datasetGroups[datasetName]) {
+                datasetGroups[datasetName] = [];
+                datasetInfo[datasetName] = {
+                    name: datasetName,
+                    points: 0,
+                    totalCases: 0,
+                    totalDeaths: 0,
+                    totalRecovered: 0,
+                    dateRange: { start: null, end: null },
+                    locations: new Set()
+                };
+            }
+            datasetGroups[datasetName].push(point);
+            
+            // Update dataset info
+            const info = datasetInfo[datasetName];
+            info.points++;
+            info.totalCases += point.cases || 0;
+            info.totalDeaths += point.deaths || 0;
+            info.totalRecovered += point.recovered || 0;
+            if (point.location) info.locations.add(point.location);
+            
+            // Update date range
+            if (point.date) {
+                const date = new Date(point.date);
+                if (!isNaN(date.getTime())) {
+                    if (!info.dateRange.start || date < info.dateRange.start) {
+                        info.dateRange.start = date;
+                    }
+                    if (!info.dateRange.end || date > info.dateRange.end) {
+                        info.dateRange.end = date;
+                    }
                 }
-                
-            } catch (error) {
-                logDebug(`Error adding marker ${index}:`, error.toString());
-                skippedMarkers++;
             }
         });
         
-        logDebug(`Markers summary - Added: ${addedMarkers}, Skipped: ${skippedMarkers}`);
+        console.log('Dataset groups created:', Object.keys(datasetGroups).length);
         
-        // Fit map to markers if any were added
-        if (addedMarkers > 0) {
-            try {
-                const group = new L.featureGroup();
-                map.eachLayer(layer => {
-                    if (layer instanceof L.CircleMarker) {
-                        group.addLayer(layer);
+        // Create markers for each dataset
+        Object.keys(datasetGroups).forEach(datasetName => {
+            datasetMarkers[datasetName] = [];
+            
+            datasetGroups[datasetName].forEach((point, index) => {
+                try {
+                    const marker = createMarker(point);
+                    if (marker) {
+                        datasetMarkers[datasetName].push(marker);
+                        markers.addLayer(marker);
+                        
+                        // Log first marker for each dataset
+                        if (index === 0) {
+                            console.log(`First marker for ${datasetName}:`, point);
+                        }
                     }
-                });
-                
-                if (group.getLayers().length > 0) {
-                    map.fitBounds(group.getBounds().pad(0.1));
-                    logDebug('Map fitted to bounds');
+                } catch (error) {
+                    console.error(`Error creating marker for ${datasetName}:`, error);
                 }
-            } catch (error) {
-                logDebug('Error fitting bounds:', error.toString());
-            }
+            });
+            
+            console.log(`Created ${datasetMarkers[datasetName].length} markers for ${datasetName}`);
+        });
+        
+        // Populate dataset filter dropdown
+        const datasetFilter = document.getElementById('dataset-filter');
+        datasetFilter.innerHTML = '<option value="all">Show All Datasets</option>';
+        Object.keys(datasetInfo).forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            datasetFilter.appendChild(option);
+        });
+    }
+    
+    function createMarker(point) {
+        try {
+            const selectedMetric = document.getElementById('metric-filter').value;
+            const value = point[selectedMetric] || 0;
+            
+            // Calculate marker properties based on value
+            const radius = calculateRadius(value, selectedMetric);
+            const color = getMarkerColor(value, selectedMetric);
+            
+            const marker = L.circleMarker([point.latitude, point.longitude], {
+                radius: radius,
+                fillColor: color,
+                color: '#000',
+                weight: 1,
+                opacity: 1,
+                fillOpacity: 0.8
+            });
+            
+            // Create popup content
+            const popupContent = `
+                <div style="min-width: 200px;">
+                    <h6>${point.location || 'Unknown Location'}</h6>
+                    <hr style="margin: 8px 0;">
+                    <p class="mb-1"><strong>Dataset:</strong> ${point.dataset_name || 'Unnamed'}</p>
+                    <p class="mb-1"><strong>Date:</strong> ${point.date || 'N/A'}</p>
+                    <div class="metric-badges">
+                        <span class="metric-badge metric-cases">Cases: ${(point.cases || 0).toLocaleString()}</span>
+                        <span class="metric-badge metric-deaths">Deaths: ${(point.deaths || 0).toLocaleString()}</span>
+                        <span class="metric-badge metric-recovered">Recovered: ${(point.recovered || 0).toLocaleString()}</span>
+                    </div>
+                </div>
+            `;
+            
+            marker.bindPopup(popupContent);
+            
+            // Store metadata on marker
+            marker.datasetName = point.dataset_name;
+            marker.dataPoint = point;
+            
+            return marker;
+        } catch (error) {
+            console.error('Error creating marker:', error);
+            return null;
         }
     }
+    
+    function calculateRadius(value, metric) {
+        // Find min and max values for scaling
+        const values = combinedMapData.map(p => p[metric] || 0).filter(v => v > 0);
+        if (values.length === 0) return 8;
+        
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        
+        // Scale between 5 and 20 pixels based on value
+        const normalized = max > min ? (value - min) / (max - min) : 0;
+        return 5 + (normalized * 15);
+    }
+    
+    function getMarkerColor(value, metric) {
+        // Color schemes for different metrics
+        const colorSchemes = {
+            cases: {
+                high: '#2E86C1',    // Blue
+                medium: '#5DADE2',  // Light Blue
+                low: '#AED6F1'      // Very Light Blue
+            },
+            deaths: {
+                high: '#CB4335',    // Red
+                medium: '#E74C3C',  // Light Red  
+                low: '#FADBD8'      // Pink
+            },
+            recovered: {
+                high: '#229954',    // Green
+                medium: '#27AE60',  // Light Green
+                low: '#D5F4E6'      // Very Light Green
+            }
+        };
+        
+        const colors = colorSchemes[metric] || colorSchemes.cases;
+        
+        // Find percentiles
+        const values = combinedMapData.map(p => p[metric] || 0).filter(v => v > 0);
+        if (values.length === 0) return colors.low;
+        
+        values.sort((a, b) => a - b);
+        const p33 = values[Math.floor(values.length * 0.33)];
+        const p66 = values[Math.floor(values.length * 0.66)];
+        
+        if (value >= p66) return colors.high;
+        if (value >= p33) return colors.medium;
+        return colors.low;
+    }
+    
+    function setupEventListeners() {
+        // Dataset filter
+        document.getElementById('dataset-filter').addEventListener('change', function() {
+            filterMarkers();
+            updateLegend();
+        });
+        
+        // Metric filter  
+        document.getElementById('metric-filter').addEventListener('change', function() {
+            updateMarkers();
+            updateLegend();
+        });
+        
+        // Date filters
+        document.getElementById('date-start').addEventListener('change', filterMarkers);
+        document.getElementById('date-end').addEventListener('change', filterMarkers);
+        
+        // Fullscreen toggle
+        document.getElementById('toggleFullscreen').addEventListener('click', toggleFullscreen);
+    }
+    
+    function filterMarkers() {
+        const selectedDataset = document.getElementById('dataset-filter').value;
+        const dateStart = document.getElementById('date-start').value;
+        const dateEnd = document.getElementById('date-end').value;
+        
+        // Clear and repopulate markers
+        markers.clearLayers();
+        
+        Object.keys(datasetMarkers).forEach(datasetName => {
+            if (selectedDataset !== 'all' && datasetName !== selectedDataset) {
+                return;
+            }
+            
+            datasetMarkers[datasetName].forEach(marker => {
+                const point = marker.dataPoint;
+                
+                // Date filtering
+                if (dateStart || dateEnd) {
+                    if (!point.date) return;
+                    
+                    const pointDate = new Date(point.date);
+                    if (isNaN(pointDate.getTime())) return;
+                    
+                    if (dateStart && pointDate < new Date(dateStart)) return;
+                    if (dateEnd && pointDate > new Date(dateEnd)) return;
+                }
+                
+                markers.addLayer(marker);
+            });
+        });
+        
+        updateGlobalStatistics();
+    }
+    
+    function updateMarkers() {
+        // Re-create all markers with new styling based on selected metric
+        processDatasets();
+        filterMarkers();
+    }
+    
+    function updateGlobalStatistics() {
+        // Calculate statistics for visible markers
+        let totalPoints = 0;
+        let totalCases = 0;
+        let totalDeaths = 0;
+        let totalRecovered = 0;
+        const locations = new Set();
+        const dates = [];
+        
+        markers.eachLayer(marker => {
+            const point = marker.dataPoint;
+            totalPoints++;
+            totalCases += point.cases || 0;
+            totalDeaths += point.deaths || 0;
+            totalRecovered += point.recovered || 0;
+            if (point.location) locations.add(point.location);
+            if (point.date) {
+                const date = new Date(point.date);
+                if (!isNaN(date.getTime())) {
+                    dates.push(date);
+                }
+            }
+        });
+        
+        // Update DOM
+        document.getElementById('total-datasets').textContent = Object.keys(datasetInfo).length;
+        document.getElementById('total-datapoints').textContent = totalPoints.toLocaleString();
+        document.getElementById('countries-covered').textContent = locations.size;
+        
+        // Update date range
+        if (dates.length > 0) {
+            dates.sort((a, b) => a - b);
+            const start = dates[0].toISOString().split('T')[0];
+            const end = dates[dates.length - 1].toISOString().split('T')[0];
+            document.getElementById('global-date-range').textContent = `${start} to ${end}`;
+        } else {
+            document.getElementById('global-date-range').textContent = '-';
+        }
+    }
+    
+    function populateDatasetList() {
+        const datasetList = document.getElementById('dataset-list');
+        datasetList.innerHTML = '';
+        
+        if (Object.keys(datasetInfo).length === 0) {
+            datasetList.innerHTML = `
+                <div class="empty-state">
+                    <i class="bi bi-database"></i>
+                    <p>No public datasets available</p>
+                    <small class="text-muted">Share your dataset with the public to make it appear here</small>
+                </div>
+            `;
+            document.getElementById('dataset-count').textContent = '0';
+            return;
+        }
+        
+        Object.values(datasetInfo).forEach(info => {
+            const card = document.createElement('div');
+            card.className = 'dataset-card p-3 mb-2 border rounded';
+            card.dataset.datasetName = info.name;
+            
+            card.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="mb-1">${info.name}</h6>
+                    <button class="btn btn-link btn-sm p-0" onclick="showDatasetDetails('${info.name}')">
+                        <i class="bi bi-info-circle"></i>
+                    </button>
+                </div>
+                <small class="text-muted d-block mb-1">${info.points} data points</small>
+                <div class="d-flex flex-wrap gap-1">
+                    <span class="badge bg-light text-dark">${info.locations.size} locations</span>
+                    <span class="badge bg-primary">${info.totalCases.toLocaleString()} cases</span>
+                </div>
+            `;
+            
+            card.addEventListener('click', () => {
+                document.getElementById('dataset-filter').value = info.name;
+                filterMarkers();
+                updateLegend();
+            });
+            
+            datasetList.appendChild(card);
+        });
+        
+        document.getElementById('dataset-count').textContent = Object.keys(datasetInfo).length;
+    }
+    
+    function showDatasetDetails(datasetName) {
+        const info = datasetInfo[datasetName];
+        if (!info) return;
+        
+        const modal = new bootstrap.Modal(document.getElementById('datasetModal'));
+        document.getElementById('datasetModalLabel').textContent = datasetName;
+        
+        const content = document.getElementById('dataset-details-content');
+        content.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Overview</h6>
+                    <ul class="list-unstyled">
+                        <li><strong>Total Cases:</strong> ${info.totalCases.toLocaleString()}</li>
+                        <li><strong>Total Deaths:</strong> ${info.totalDeaths.toLocaleString()}</li>
+                        <li><strong>Total Recovered:</strong> ${info.totalRecovered.toLocaleString()}</li>
+                    </ul>
+                </div>
+            </div>
+        `;
+        
+        // Set view dataset button link (adjust URL as needed)
+        document.getElementById('view-dataset-btn').href = `/visualize/${info.datasetId || ''}`;
+        
+        modal.show();
+    }
+    
+    function formatDateRange(dateRange) {
+        if (!dateRange.start || !dateRange.end) return 'N/A';
+        const start = dateRange.start.toISOString().split('T')[0];
+        const end = dateRange.end.toISOString().split('T')[0];
+        return `${start} to ${end}`;
+    }
+    
+    function updateLegend() {
+        const metric = document.getElementById('metric-filter').value;
+        const legend = document.getElementById('map-legend');
+        
+        // Calculate quintiles for legend
+        const values = combinedMapData.map(p => p[metric] || 0).filter(v => v > 0);
+        if (values.length === 0) {
+            legend.innerHTML = '<p class="text-muted">No data available</p>';
+            return;
+        }
+        
+        values.sort((a, b) => a - b);
+        const quintiles = [
+            values[0],
+            values[Math.floor(values.length * 0.2)] || values[0],
+            values[Math.floor(values.length * 0.4)] || values[0],
+            values[Math.floor(values.length * 0.6)] || values[0],
+            values[Math.floor(values.length * 0.8)] || values[0],
+            values[values.length - 1]
+        ];
+        
+        legend.innerHTML = `
+            <p><strong>${metric.charAt(0).toUpperCase() + metric.slice(1)}</strong></p>
+            ${quintiles.slice(0, -1).map((val, i) => `
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: ${getMarkerColor(val, metric)}"></div>
+                    <span>${val.toLocaleString()} - ${quintiles[i + 1].toLocaleString()}</span>
+                </div>
+            `).join('')}
+        `;
+    }
+    
+    function toggleFullscreen() {
+        const mapContainer = document.getElementById('map');
+        if (!document.fullscreenElement) {
+            mapContainer.requestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+    }
+    
+    function showEmptyState() {
+        const datasetList = document.getElementById('dataset-list');
+        datasetList.innerHTML = `
+            <div class="empty-state">
+                <i class="bi bi-database"></i>
+                <p>No public datasets available</p>
+                <small class="text-muted">Share your dataset with the public to make it appear here</small>
+            </div>
+        `;
+    }
+    
+    // Handle fullscreen changes
+    document.addEventListener('fullscreenchange', function() {
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 100);
+    });
+    
+    // Make showDatasetDetails global so it can be called from onclick
+    window.showDatasetDetails = showDatasetDetails;
+    
+    // Force map resize on window resize
+    window.addEventListener('resize', function() {
+        if (map) {
+            map.invalidateSize();
+        }
+    });
 </script>
-{% endblock %}
+{% endblock %}-unstyled">
