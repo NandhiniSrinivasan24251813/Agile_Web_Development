@@ -20,15 +20,17 @@ from queue import Queue
 import time
 import logging
 from flask import abort, flash, redirect, url_for
-# Custom imports
-from data_bridge import DataBridge
-from utils import DataConverter
 from twilio.rest import Client
 import random
 from flask import session
 from flask import Flask, Blueprint
 from flask_wtf import CSRFProtect
 from itertools import chain
+# Custom imports
+from data_bridge import DataBridge
+from utils import DataConverter
+
+
 app = Flask(__name__)
 csrf = CSRFProtect(app)
 
@@ -990,18 +992,42 @@ def debug_file(dataset_id):
 @login_required
 def delete_dataset(dataset_id):
     dataset = Dataset.query.get_or_404(dataset_id)
+    
+    # Check permissions
     if dataset.user_id != current_user.id:
         flash('You do not have permission to delete this dataset.', 'error')
         return redirect(url_for('dashboard'))
+    
     try:
-        # Delete associated records
+        # Delete any legacy EpidemicRecord entries (for backward compatibility)
         EpidemicRecord.query.filter_by(dataset_id=dataset.id).delete()
+        
+        # Delete any SharedDataset entries referencing this dataset
+        SharedDataset.query.filter_by(dataset_id=dataset.id).delete()
+        
+        # Delete the dataset itself (the data_json field will be deleted automatically)
         db.session.delete(dataset)
+        
+        # Commit all changes
         db.session.commit()
+        
+        # Log the deletion
+        audit = AuditLog(
+            user_id=current_user.id,
+            action="delete_dataset",
+            target_type="Dataset",
+            target_id=dataset.id,
+            details=f"Deleted dataset '{dataset.name}'"
+        )
+        db.session.add(audit)
+        db.session.commit()
+        
         flash('Dataset deleted successfully.', 'success')
+        
     except Exception as e:
         db.session.rollback()
         flash(f'Error deleting dataset: {str(e)}', 'error')
+        
     return redirect(url_for('dashboard'))
 
 @app.route('/share/<int:dataset_id>', methods=['POST'])
