@@ -13,7 +13,7 @@
         <div class="card-body">
             <h3 class="card-title text-center mb-4">Create Account</h3>
 
-            <form method="POST" action="{{ url_for('signup') }}">
+            <form method="POST" action="{{ url_for('auth.signup') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 
                 <div class="mb-3">
@@ -64,7 +64,7 @@
     </div>
     
     <div class="text-center mt-3">
-        <p>Already have an account? <a href="{{ url_for('login') }}" class="text-decoration-none">Sign in</a></p>
+        <p>Already have an account? <a href="{{ url_for('auth.login') }}" class="text-decoration-none">Sign in</a></p>
     </div>
 </div>
 {% endblock %}

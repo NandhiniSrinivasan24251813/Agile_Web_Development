@@ -24,7 +24,7 @@
                     <a href="#data" class="list-group-item list-group-item-action" data-bs-toggle="list">
                         <i class="bi bi-database me-2"></i> Data Management
                     </a>
-                    <a href="{{ url_for('profile') }}" class="list-group-item list-group-item-action">
+                    <a href="{{ url_for('profile.profile') }}" class="list-group-item list-group-item-action">
                         <i class="bi bi-arrow-left me-2"></i> Back to Profile
                     </a>
                 </div>
@@ -41,7 +41,7 @@
                             <h5 class="mb-0">Account Settings</h5>
                         </div>
                         <div class="card-body">
-                            <form method="POST" action="{{ url_for('settings') }}">
+                            <form method="POST" action="{{ url_for('profile.settings') }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <input type="hidden" name="form_type" value="account">
                                 
@@ -82,7 +82,7 @@
                             <h5 class="mb-0">Security Settings</h5>
                         </div>
                         <div class="card-body">
-                            <form method="POST" action="{{ url_for('settings') }}">
+                            <form method="POST" action="{{ url_for('profile.settings') }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <input type="hidden" name="form_type" value="security">
                                 
@@ -121,7 +121,7 @@
                             <h5 class="mb-0">Notification Settings</h5>
                         </div>
                         <div class="card-body">
-                            <form method="POST" action="{{ url_for('settings') }}">
+                            <form method="POST" action="{{ url_for('profile.settings') }}">
                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                 <input type="hidden" name="form_type" value="notifications">
                                 
@@ -171,7 +171,7 @@
                                 <h6>Data Retention</h6>
                                 <p class="text-muted">Configure how long your uploaded data is kept in the system.</p>
                                 
-                                <form method="POST" action="{{ url_for('settings') }}" class="mb-4">
+                                <form method="POST" action="{{ url_for('profile.settings') }}" class="mb-4">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <input type="hidden" name="form_type" value="data_retention">
                                     
@@ -234,7 +234,7 @@
                 <p>This will permanently delete all datasets, visualizations, and reports you have created.</p>
                 <p>Your account will remain active, but all your data will be removed.</p>
                 
-                <form id="deleteDataForm" method="POST" action="{{ url_for('settings') }}">
+                <form id="deleteDataForm" method="POST" action="{{ url_for('profile.settings') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="form_type" value="delete_data">
                     
@@ -265,7 +265,7 @@
                 <p>This will permanently delete your account and all associated data.</p>
                 <p>You will lose access to all your datasets, visualizations, and reports.</p>
                 
-                <form id="deleteAccountForm" method="POST" action="{{ url_for('settings') }}">
+                <form id="deleteAccountForm" method="POST" action="{{ url_for('profile.settings') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="form_type" value="delete_account">
                     

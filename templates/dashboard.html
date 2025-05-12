@@ -31,7 +31,7 @@ System{% endblock %} {% block extra_css %}
       <p class="lead">Welcome, {{ current_user.username }}!</p>
     </div>
     <div class="col-md-4 text-end">
-      <a href="{{ url_for('upload') }}" class="btn btn-primary">
+      <a href="{{ url_for('data.upload') }}" class="btn btn-primary">
         <i class="bi bi-upload"></i>Upload Dataset
       </a>
     </div>
@@ -45,7 +45,7 @@ System{% endblock %} {% block extra_css %}
         >
           <h5 class="mb-0">Your Datasets</h5>
           <a
-            href="{{ url_for('upload') }}"
+            href="{{ url_for('data.upload') }}"
             class="btn btn-sm btn-outline-primary"
           >
             <i class="bi bi-plus"></i>Add New
@@ -98,7 +98,7 @@ System{% endblock %} {% block extra_css %}
                   <td>
                     <div class="btn-group btn-group-sm">
                       <a
-                        href="{{ url_for('visualize', dataset_id=dataset.id) }}"
+                        href="{{ url_for('data.visualize', dataset_id=dataset.id) }}"
                         class="btn btn-primary"
                       >
                         <i class="bi bi-graph-up"></i> View
@@ -163,7 +163,7 @@ System{% endblock %} {% block extra_css %}
               <i class="bi bi-file-earmark-x" style="font-size: 3rem"></i>
             </div>
             <p>You haven't uploaded any datasets yet.</p>
-            <a href="{{ url_for('upload') }}" class="btn btn-primary"
+            <a href="{{ url_for('data.upload') }}" class="btn btn-primary"
               >Upload Dataset</a
             >
           </div>
@@ -204,7 +204,7 @@ System{% endblock %} {% block extra_css %}
               <td>
                 <div class="btn-group btn-group-sm">
                   <a
-                    href="{{ url_for('visualize', dataset_id=dataset.id) }}"
+                    href="{{ url_for('data.visualize', dataset_id=dataset.id) }}"
                     class="btn btn-primary"
                   >
                     <i class="bi bi-graph-up"></i> View
@@ -232,19 +232,19 @@ System{% endblock %} {% block extra_css %}
         <div class="card-body">
           <div class="list-group">
             <a
-              href="{{ url_for('upload') }}"
+              href="{{ url_for('data.upload') }}"
               class="list-group-item list-group-item-action"
             >
               <i class="bi bi-upload me-2"></i> Upload New Dataset
             </a>
             <a
-              href="{{ url_for('explore_global_map') }}"
+              href="{{ url_for('main.explore_global_map') }}"
               class="list-group-item list-group-item-action"
             >
               <i class="bi bi-map me-2"></i> Explore Global Map
             </a>
             <a
-              href="{{ url_for('profile') }}"
+              href="{{ url_for('profile.profile') }}"
               class="list-group-item list-group-item-action"
             >
               <i class="bi bi-person me-2"></i> View Profile
@@ -293,7 +293,7 @@ System{% endblock %} {% block extra_css %}
         </button>
         <form
           method="POST"
-          action="{{ url_for('delete_dataset', dataset_id=dataset.id) }}"
+          action="{{ url_for('data.delete_dataset', dataset_id=dataset.id) }}"
           style="display: inline-block"
         >
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
@@ -331,7 +331,7 @@ System{% endblock %} {% block extra_css %}
       </div>
       <form
         method="POST"
-        action="{{ url_for('share_dataset', dataset_id=dataset.id) }}"
+        action="{{ url_for('data.share_dataset', dataset_id=dataset.id) }}"
       >
         <div class="modal-body">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />

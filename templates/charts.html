@@ -109,7 +109,7 @@ endblock %} {% block extra_css %}
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2>{{ dataset.name }} - Charts</h2>
     <a
-      href="{{ url_for('visualize', dataset_id=dataset.id) }}"
+      href="{{ url_for('data.visualize', dataset_id=dataset.id) }}"
       class="btn btn-outline-secondary"
     >
       <i class="bi bi-arrow-left"></i> Back to Visualize
