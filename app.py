@@ -1055,6 +1055,40 @@ def share_dataset(dataset_id):
     return redirect(url_for('dashboard'))
 
 
+# Charts Route
+@app.route('/charts/<int:dataset_id>')
+@login_required
+def view_charts(dataset_id):
+    dataset = Dataset.query.get_or_404(dataset_id)
+
+    # Permission check
+    is_owner = dataset.user_id == current_user.id
+    is_shared = SharedDataset.query.filter_by(dataset_id=dataset_id, shared_with_id=current_user.id).first() is not None
+    is_public = dataset.sharing_status == 'public'
+
+    if not (is_owner or is_shared or is_public):
+        flash('You do not have permission to view this chart', 'error')
+        return redirect(url_for('dashboard'))
+
+    records = dataset.get_data() or []
+    chart_fields = ['cases', 'deaths', 'recovered']
+    if any('tested' in r for r in records):
+        chart_fields.append('tested')
+    if any('hospitalized' in r for r in records):
+        chart_fields.append('hospitalized')
+
+    # Filter for time series chart: keep only records with valid dates
+    chart_data = [r for r in records if 'date' in r and r['date']]
+
+    return render_template(
+        'charts.html',
+        dataset=dataset,
+        chart_data=json.dumps(chart_data),
+        chart_fields=chart_fields
+    )
+
+
+
 # --------------------------------------------
 # Helper Functions
 # --------------------------------------------
