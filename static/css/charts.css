@@ -1,0 +1,11 @@
+[data-theme="dark"] select.form-select {
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+  }
+  
+  [data-theme="dark"] select.form-select option {
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+  }
+  

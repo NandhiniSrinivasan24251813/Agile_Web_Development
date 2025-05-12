@@ -92,8 +92,15 @@
                     <li><a class="dropdown-item" href="/export/{{ dataset.id }}?format=json">JSON</a></li>
                 </ul>
             </div>
+            <div class="mt-2">
+                <a href="{{ url_for('view_charts', dataset_id=dataset.id) }}" class="btn btn-outline-info w-100">
+                    <i class="bi bi-bar-chart-line"></i> View Charts
+                </a>
+            </div>
         </div>
     </div>
+        
+   
     
     <div class="row">
         <!-- Main visualization area -->

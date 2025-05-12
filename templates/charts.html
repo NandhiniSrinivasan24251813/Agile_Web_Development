@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Charts - {{ dataset.name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/charts.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>{{ dataset.name }} - Charts</h2>
+    <a href="{{ url_for('visualize', dataset_id=dataset.id) }}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> Back to Visualize
+    </a>
+  </div>
+
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <label for="metricSelector" class="form-label">Select Metric:</label>
+      <select id="metricSelector" class="form-select">
+        <option value="cases">Cases</option>
+        <option value="deaths">Deaths</option>
+        <option value="recovered">Recovered</option>
+        {% if dataset.has_time and 'tested' in chart_fields %}
+        <option value="tested">Tested</option>
+        {% endif %}
+        {% if dataset.has_time and 'hospitalized' in chart_fields %}
+        <option value="hospitalized">Hospitalized</option>
+        {% endif %}
+      </select>
+    </div>
+    <div class="col-md-6">
+      <label for="chartType" class="form-label">Chart Type:</label>
+      <select id="chartType" class="form-select">
+        <option value="line">Line</option>
+        <option value="bar">Bar</option>
+        <option value="pie">Pie</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-center">
+    <div style="height: 500px; width: 100%; max-width: 900px;">
+      <canvas id="chartCanvas"></canvas>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  window.chartData = {{ chart_data | safe }};
+</script>
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+
+
+{% endblock %}
