@@ -1,11 +1,544 @@
+/* Theme-specific base styles */
+:root {
+  --chart-grid-color: rgba(0, 0, 0, 0.1);
+  --chart-bg-opacity: 0.2;
+  --chart-hover-opacity: 0.7;
+  --chart-tooltip-bg: rgba(0, 0, 0, 0.8);
+  --chart-tooltip-color: #ffffff;
+  --chart-loader-bg: rgba(255, 255, 255, 0.8);
+  --chart-box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  --chart-box-shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.08);
+  --chart-border-color: var(--border-color);
+  --chart-slider-track: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.1),
+    rgba(0, 0, 0, 0.15)
+  );
+}
+
+[data-theme="dark"] {
+  --chart-grid-color: rgba(255, 255, 255, 0.1);
+  --chart-bg-opacity: 0.3;
+  --chart-hover-opacity: 0.8;
+  --chart-tooltip-bg: rgba(30, 30, 30, 0.9);
+  --chart-tooltip-color: #e0e0e0;
+  --chart-loader-bg: rgba(0, 0, 0, 0.7);
+  --chart-box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  --chart-box-shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.25);
+  --chart-border-color: var(--border-color);
+  --chart-slider-track: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.2)
+  );
+}
+
+/* Form control theme support */
 [data-theme="dark"] select.form-select {
-    background-color: var(--bg-color);
-    color: var(--text-primary);
-    border-color: var(--border-color);
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] select.form-select option {
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+}
+
+/* Enhanced Chart Styling */
+.chart-container {
+  transition: var(--transition-base);
+  position: relative;
+  backdrop-filter: blur(5px);
+  box-shadow: var(--chart-box-shadow);
+  background-color: var(--card-bg);
+  border: 1px solid var(--chart-border-color);
+}
+
+[data-theme="dark"] .chart-container {
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+.chart-container canvas {
+  transition: var(--transition-base);
+  border-radius: var(--radius-lg);
+}
+
+/* Time Range Controls */
+.time-range-slider {
+  padding: 20px;
+  margin: 15px 0;
+  background-color: var(--card-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--chart-border-color);
+  transition: var(--transition-base);
+}
+
+[data-theme="dark"] .time-range-slider {
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.time-range-slider:hover {
+  box-shadow: var(--chart-box-shadow-hover);
+}
+
+.time-range-slider .form-range {
+  height: 8px;
+}
+
+.time-range-slider .form-range::-webkit-slider-thumb {
+  background-color: var(--primary-color);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+}
+
+[data-theme="dark"] .time-range-slider .form-range::-webkit-slider-thumb {
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+.time-range-slider .form-range::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.time-range-slider .form-range::-webkit-slider-runnable-track {
+  height: 8px;
+  background: var(--chart-slider-track);
+  border-radius: 10px;
+}
+
+.time-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+#dateRangeLabel {
+  font-weight: 600;
+  transition: all 0.3s ease;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background-color: var(--primary-color);
+  color: white;
+  font-size: 0.9rem;
+}
+
+/* Quick Time Range Buttons */
+.quick-range {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.quick-range button {
+  background-color: var(--bg-color);
+  border: 1px solid var(--chart-border-color);
+  color: var(--text-primary);
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  transition: all 0.2s ease-out;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .quick-range button {
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.quick-range button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+[data-theme="dark"] .quick-range button:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.quick-range button.active {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="dark"] .quick-range button.active {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* Chart Options */
+.chart-options {
+  background-color: var(--card-bg);
+  border-radius: var(--radius-xl);
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid var(--chart-border-color);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.03);
+  transition: var(--transition-base);
+}
+
+[data-theme="dark"] .chart-options {
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.chart-options:hover {
+  box-shadow: var(--chart-box-shadow-hover);
+}
+
+.chart-options .form-select {
+  border-radius: 10px;
+  padding: 0.6rem 1rem;
+  border-color: var(--chart-border-color);
+  box-shadow: none;
+  transition: all 0.2s ease;
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+}
+
+.chart-options .form-select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .chart-options .form-select:focus {
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.1);
+}
+
+.chart-options .form-label {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-secondary);
+}
+
+/* Action Buttons */
+.chart-actions {
+  margin-top: 15px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 15px;
+  border-top: 1px solid var(--chart-border-color);
+}
+
+.chart-actions button {
+  border-radius: 30px;
+  padding: 8px 15px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s ease;
+  border-width: 2px;
+  background-color: transparent;
+  color: var(--text-primary);
+  border-color: var(--chart-border-color);
+}
+
+.chart-actions button i {
+  font-size: 1rem;
+  transition: transform 0.3s ease;
+}
+
+.chart-actions button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  border-color: var(--primary-color);
+}
+
+[data-theme="dark"] .chart-actions button:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.chart-actions button.active {
+  background-color: var(--bg-color);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+[data-theme="dark"] .chart-actions button.active {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Download Button Special Styling */
+#exportImage {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+#exportImage:hover {
+  background-color: var(--primary-color);
+  filter: brightness(1.1);
+}
+
+/* Tooltip customizations */
+#chartjs-tooltip {
+  opacity: 0;
+  position: absolute;
+  background: var(--chart-tooltip-bg);
+  color: var(--chart-tooltip-color);
+  border-radius: 8px;
+  padding: 12px;
+  pointer-events: none;
+  transform: translate(-50%, 0);
+  transition: all 0.1s ease;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--chart-border-color);
+}
+
+[data-theme="dark"] #chartjs-tooltip {
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+}
+
+/* Chart Legend Styling */
+.chart-legend {
+  list-style: none;
+  padding: 0;
+  margin: 15px auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 15px;
+}
+
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 20px;
+  background-color: var(--bg-color);
+  border: 1px solid var(--chart-border-color);
+  transition: var(--transition-base);
+}
+
+.chart-legend-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.chart-legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+/* Analysis Insights Section */
+#analysisInsights {
+  background-color: var(--bg-color);
+  border-radius: var(--radius-lg);
+  padding: 15px;
+  margin-top: 15px;
+  border: 1px solid var(--chart-border-color);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="dark"] #analysisInsights {
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+
+#analysisInsights h6 {
+  color: var(--primary-color);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#analysisInsights h6::before {
+  content: "\F27A";
+  font-family: bootstrap-icons;
+  font-size: 1.1rem;
+}
+
+#insightsList {
+  list-style: none;
+  padding-left: 10px;
+  margin-top: 10px;
+}
+
+#insightsList li {
+  padding: 5px 0;
+  position: relative;
+  padding-left: 18px;
+  color: var(--text-secondary);
+}
+
+#insightsList li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 12px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--primary-color);
+  opacity: 0.7;
+}
+
+/* Animation for chart changes */
+@keyframes chartFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
-  
-  [data-theme="dark"] select.form-select option {
-    background-color: var(--bg-color);
-    color: var(--text-primary);
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
-  
+}
+
+.chart-animate {
+  animation: chartFadeIn 0.5s ease-out forwards;
+}
+
+/* Chart Explanation */
+.chart-explanation {
+  background-color: var(--card-bg);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-top: 25px;
+  border: 1px solid var(--chart-border-color);
+  border-left: 4px solid var(--info-color);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.03);
+  transition: var(--transition-base);
+}
+
+[data-theme="dark"] .chart-explanation {
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.chart-explanation:hover {
+  box-shadow: var(--chart-box-shadow-hover);
+}
+
+.chart-explanation h5 {
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-bottom: 15px;
+  font-size: 1.1rem;
+}
+
+.chart-explanation p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .chart-container {
+    height: 400px !important;
+    padding: 10px;
+  }
+
+  .chart-options {
+    padding: 15px;
+  }
+
+  .time-range-slider {
+    padding: 15px;
+  }
+
+  .quick-range {
+    justify-content: center;
+    margin-top: 15px;
+  }
+
+  .chart-actions {
+    justify-content: center;
+  }
+
+  .chart-explanation {
+    padding: 15px;
+  }
+}
+
+@media (max-width: 576px) {
+  .chart-container {
+    height: 350px !important;
+  }
+
+  .time-labels {
+    font-size: 0.75rem;
+  }
+
+  .quick-range button {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+  }
+
+  .chart-actions button {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+}
+
+/* Loading indicator */
+.chart-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--chart-loader-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  backdrop-filter: blur(3px);
+  border-radius: var(--radius-lg);
+}
+
+.chart-loading.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.chart-loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top-color: var(--primary-color);
+  animation: spin 1s ease-in-out infinite;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .chart-loading-spinner {
+  border-color: rgba(255, 255, 255, 0.1);
+  border-top-color: var(--primary-color);
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+}
+
+.chart-loading::after {
+  content: "Loading...";
+  position: absolute;
+  bottom: calc(50% - 40px);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
