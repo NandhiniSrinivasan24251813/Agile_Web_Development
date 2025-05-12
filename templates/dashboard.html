@@ -1,267 +1,380 @@
-{% extends 'base.html' %}
-
-{% block title %}Dashboard - Epidemic Monitoring System{% endblock %}
-
-{% block extra_css %}
+{% extends 'base.html' %} {% block title %}Dashboard - Epidemic Monitoring
+System{% endblock %} {% block extra_css %}
 <style>
-.table .dropdown-menu.dropdown-menu-end.show {
+  .table .dropdown-menu.dropdown-menu-end.show {
     position: fixed !important; /* Changed to fixed */
     inset: auto !important;
     transform: none !important;
     right: auto !important; /* Let JavaScript position it */
     left: auto !important; /* Let JavaScript position it */
-    top: auto !important; /* Let JavaScript position it */ 
+    top: auto !important; /* Let JavaScript position it */
     margin-top: 0.125rem !important;
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
     z-index: 9999 !important; /* Much higher z-index */
-    box-shadow: 0 0 10px rgba(0,0,0,0.5) !important; /* Add shadow to see it better */
-}
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5) !important; /* Add shadow to see it better */
+  }
 
-/* Eliminate potential interference from other elements */
-.table .dropdown-toggle.show {
+  /* Eliminate potential interference from other elements */
+  .table .dropdown-toggle.show {
     position: relative !important;
     z-index: 9998 !important;
-}
+  }
 </style>
 
-{% endblock %}
-
-{% block content %}
+{% endblock %} {% block content %}
 <div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>Dashboard</h1>
-            <p class="lead">Welcome, {{ current_user.username }}!</p>
-        </div>
-        <div class="col-md-4 text-end">
-            <a href="{{ url_for('upload') }}" class="btn btn-primary">
-                <i class="bi bi-upload"></i> Upload Dataset
-            </a>
-        </div>
+  <div class="row mb-4">
+    <div class="col-md-8">
+      <h1>Dashboard</h1>
+      <p class="lead">Welcome, {{ current_user.username }}!</p>
     </div>
+    <div class="col-md-4 text-end">
+      <a href="{{ url_for('upload') }}" class="btn btn-primary">
+        <i class="bi bi-upload"></i>Upload Dataset
+      </a>
+    </div>
+  </div>
 
-    <div class="row mt-4">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Your Datasets</h5>
-                    <a href="{{ url_for('upload') }}" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-plus"></i> Add New
-                    </a>
-                </div>
-                <div class="card-body">
-                    {% if user_datasets %}
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle">
-                                <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Type</th>
-                                        <th>Date</th>
-                                        <th>Sharing</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for dataset in user_datasets %}
-                                    <tr>
-                                        <td>
-                                            <strong>{{ dataset.name }}</strong>
-                                            <div class="small text-muted">{{ dataset.description|truncate(50) }}</div>
-                                        </td>
-                                        <td>
-                                            <span class="badge bg-primary">{{ dataset.original_format|capitalize }}</span>
-                                            {% if dataset.has_geo %}
-                                            <span class="badge bg-info">Geo</span>
-                                            {% endif %}
-                                            {% if dataset.has_time %}
-                                            <span class="badge bg-secondary">Time</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-nowrap">{{ dataset.upload_date.strftime('%Y-%m-%d') }}</td>
-                                        <td>
-                                            {% if dataset.sharing_status == 'public' %}
-                                            <span class="badge bg-success">Public</span>
-                                            {% elif dataset.sharing_status == 'private' %}
-                                            <span class="badge bg-secondary">Private</span>
-                                            {% else %}
-                                            <span class="badge bg-primary">Limited</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>
-                                            <div class="btn-group btn-group-sm">
-                                                <a href="{{ url_for('visualize', dataset_id=dataset.id) }}" class="btn btn-primary">
-                                                    <i class="bi bi-graph-up"></i> View
-                                                </a>
-                                                <!-- Share Button triggers modal -->
-                                                <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#shareModal{{ dataset.id }}">
-                                                    <i class="bi bi-share"></i> Share
-                                                </button>
-                                                <button type="button" class="btn btn-outline-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
-                                                    <span class="visually-hidden">Toggle Dropdown</span>
-                                                </button>
-                                                <ul class="dropdown-menu dropdown-menu-end">
-                                                    <li><a class="dropdown-item" href="/export/{{ dataset.id }}?format=csv">
-                                                        <i class="bi bi-download"></i> Export CSV</a>
-                                                    </li>
-                                                    <li><a class="dropdown-item" href="/export/{{ dataset.id }}?format=json">
-                                                        <i class="bi bi-download"></i> Export JSON</a>
-                                                    </li>
-                                                    <li><hr class="dropdown-divider"></li>
-                                                    <li>
-                                                        <button type="button" class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ dataset.id }}">
-                                                            <i class="bi bi-trash"></i> Delete
-                                                        </button>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </td>
-                                    </tr>
-
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% else %}
-                        <div class="text-center py-5">
-                            <div class="mb-3">
-                                <i class="bi bi-file-earmark-x" style="font-size: 3rem;"></i>
-                            </div>
-                            <p>You haven't uploaded any datasets yet.</p>
-                            <a href="{{ url_for('upload') }}" class="btn btn-primary">Upload Dataset</a>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
+  <div class="row mt-4">
+    <div class="col-md-8">
+      <div class="card">
+        <div
+          class="card-header d-flex justify-content-between align-items-center"
+        >
+          <h5 class="mb-0">Your Datasets</h5>
+          <a
+            href="{{ url_for('upload') }}"
+            class="btn btn-sm btn-outline-primary"
+          >
+            <i class="bi bi-plus"></i>Add New
+          </a>
         </div>
-        
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Shared With You</h5>
-                </div>
-                <div class="card-body">
-                    {% if shared_datasets %}
-                        <table class="table">
-                            {% for dataset in shared_datasets %}
-                            <tr>
-                                <td>
-                                    <strong>{{ dataset.name }}</strong>
-                                    <div class="small text-muted">{{ dataset.description|truncate(50) }}</div>
-                                </td>
-                                <td>
-                                    <span class="badge bg-primary">{{ dataset.original_format|capitalize }}</span>
-                                    {% if dataset.has_geo %}
-                                    <span class="badge bg-info">Geo</span>
-                                    {% endif %}
-                                    {% if dataset.has_time %}
-                                    <span class="badge bg-secondary">Time</span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-nowrap">{{ dataset.upload_date.strftime('%Y-%m-%d') }}</td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="{{ url_for('visualize', dataset_id=dataset.id) }}" class="btn btn-primary">
-                                            <i class="bi bi-graph-up"></i> View
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </table>
-                    {% else %}
-                        <div class="text-center py-4">
-                            <div class="mb-3">
-                                <i class="bi bi-share" style="font-size: 2rem;"></i>
-                            </div>
-                            <p>No datasets have been shared with you.</p>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-            
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Quick Links</h5>
-                </div>
-                <div class="card-body">
-                    <div class="list-group">
-                        <a href="{{ url_for('upload') }}" class="list-group-item list-group-item-action">
-                            <i class="bi bi-upload me-2"></i> Upload New Dataset
-                        </a>
-                        <a href="{{ url_for('explore_global_map') }}" class="list-group-item list-group-item-action">
-                            <i class="bi bi-map me-2"></i> Explore Global Map
-                        </a>
-                        <a href="{{ url_for('profile') }}" class="list-group-item list-group-item-action">
-                            <i class="bi bi-person me-2"></i> View Profile
-                        </a>
+        <div class="card-body">
+          {% if user_datasets %}
+          <div class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Type</th>
+                  <th>Date</th>
+                  <th>Sharing</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for dataset in user_datasets %}
+                <tr>
+                  <td>
+                    <strong>{{ dataset.name }}</strong>
+                    <div class="small text-muted">
+                      {{ dataset.description|truncate(50) }}
                     </div>
-                </div>
+                  </td>
+                  <td>
+                    <span class="badge bg-primary"
+                      >{{ dataset.original_format|capitalize }}</span
+                    >
+                    {% if dataset.has_geo %}
+                    <span class="badge bg-info">Geo</span>
+                    {% endif %} {% if dataset.has_time %}
+                    <span class="badge bg-secondary">Time</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-nowrap">
+                    {{ dataset.upload_date.strftime('%Y-%m-%d') }}
+                  </td>
+                  <td>
+                    {% if dataset.sharing_status == 'public' %}
+                    <span class="badge bg-success">Public</span>
+                    {% elif dataset.sharing_status == 'private' %}
+                    <span class="badge bg-secondary">Private</span>
+                    {% else %}
+                    <span class="badge bg-primary">Limited</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="btn-group btn-group-sm">
+                      <a
+                        href="{{ url_for('visualize', dataset_id=dataset.id) }}"
+                        class="btn btn-primary"
+                      >
+                        <i class="bi bi-graph-up"></i> View
+                      </a>
+                      <!-- Share Button triggers modal -->
+                      <button
+                        type="button"
+                        class="btn btn-outline-success"
+                        data-bs-toggle="modal"
+                        data-bs-target="#shareModal{{ dataset.id }}"
+                      >
+                        <i class="bi bi-share"></i>Share
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-outline-primary dropdown-toggle dropdown-toggle-split"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false"
+                      >
+                        <span class="visually-hidden">Toggle Dropdown</span>
+                      </button>
+                      <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                          <a
+                            class="dropdown-item"
+                            href="/export/{{ dataset.id }}?format=csv"
+                          >
+                            <i class="bi bi-download"></i>Export CSV</a
+                          >
+                        </li>
+                        <li>
+                          <a
+                            class="dropdown-item"
+                            href="/export/{{ dataset.id }}?format=json"
+                          >
+                            <i class="bi bi-download"></i>Export JSON</a
+                          >
+                        </li>
+                        <li><hr class="dropdown-divider" /></li>
+                        <li>
+                          <button
+                            type="button"
+                            class="dropdown-item text-danger"
+                            data-bs-toggle="modal"
+                            data-bs-target="#deleteModal{{ dataset.id }}"
+                          >
+                            <i class="bi bi-trash"></i>Delete
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+                  </td>
+                </tr>
+
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="text-center py-5">
+            <div class="mb-3">
+              <i class="bi bi-file-earmark-x" style="font-size: 3rem"></i>
             </div>
+            <p>You haven't uploaded any datasets yet.</p>
+            <a href="{{ url_for('upload') }}" class="btn btn-primary"
+              >Upload Dataset</a
+            >
+          </div>
+          {% endif %}
         </div>
+      </div>
     </div>
+
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-header">
+          <h5 class="mb-0">Shared With You</h5>
+        </div>
+        <div class="card-body">
+          {% if shared_datasets %}
+          <table class="table">
+            {% for dataset in shared_datasets %}
+            <tr>
+              <td>
+                <strong>{{ dataset.name }}</strong>
+                <div class="small text-muted">
+                  {{ dataset.description|truncate(50) }}
+                </div>
+              </td>
+              <td>
+                <span class="badge bg-primary"
+                  >{{ dataset.original_format|capitalize }}</span
+                >
+                {% if dataset.has_geo %}
+                <span class="badge bg-info">Geo</span>
+                {% endif %} {% if dataset.has_time %}
+                <span class="badge bg-secondary">Time</span>
+                {% endif %}
+              </td>
+              <td class="text-nowrap">
+                {{ dataset.upload_date.strftime('%Y-%m-%d') }}
+              </td>
+              <td>
+                <div class="btn-group btn-group-sm">
+                  <a
+                    href="{{ url_for('visualize', dataset_id=dataset.id) }}"
+                    class="btn btn-primary"
+                  >
+                    <i class="bi bi-graph-up"></i> View
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </table>
+          {% else %}
+          <div class="text-center py-4">
+            <div class="mb-3">
+              <i class="bi bi-share" style="font-size: 2rem"></i>
+            </div>
+            <p>No datasets have been shared with you.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card mt-4">
+        <div class="card-header">
+          <h5 class="mb-0">Quick Links</h5>
+        </div>
+        <div class="card-body">
+          <div class="list-group">
+            <a
+              href="{{ url_for('upload') }}"
+              class="list-group-item list-group-item-action"
+            >
+              <i class="bi bi-upload me-2"></i> Upload New Dataset
+            </a>
+            <a
+              href="{{ url_for('explore_global_map') }}"
+              class="list-group-item list-group-item-action"
+            >
+              <i class="bi bi-map me-2"></i> Explore Global Map
+            </a>
+            <a
+              href="{{ url_for('profile') }}"
+              class="list-group-item list-group-item-action"
+            >
+              <i class="bi bi-person me-2"></i> View Profile
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Delete Confirmation Modals -->
 {% for dataset in user_datasets %}
-<div class="modal fade" id="deleteModal{{ dataset.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ dataset.id }}" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalLabel{{ dataset.id }}">Delete Dataset</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete "<strong>{{ dataset.name }}</strong>"?</p>
-                <p class="text-danger"><i class="bi bi-exclamation-triangle"></i> This action cannot be undone.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form method="POST" action="{{ url_for('delete_dataset', dataset_id=dataset.id) }}" style="display: inline-block;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-danger">
-                        <i class="bi bi-trash"></i> Delete
-                    </button>
-                </form>
-            </div>
-        </div>
+<div
+  class="modal fade"
+  id="deleteModal{{ dataset.id }}"
+  tabindex="-1"
+  aria-labelledby="deleteModalLabel{{ dataset.id }}"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteModalLabel{{ dataset.id }}">
+          Delete Dataset
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <p>
+          Are you sure you want to delete "<strong>{{ dataset.name }}</strong>"?
+        </p>
+        <p class="text-danger">
+          <i class="bi bi-exclamation-triangle"></i> This action cannot be
+          undone.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Cancel
+        </button>
+        <form
+          method="POST"
+          action="{{ url_for('delete_dataset', dataset_id=dataset.id) }}"
+          style="display: inline-block"
+        >
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button type="submit" class="btn btn-danger">
+            <i class="bi bi-trash"></i> Delete
+          </button>
+        </form>
+      </div>
     </div>
+  </div>
 </div>
 {% endfor %}
 
 <!-- Share Modals -->
 {% for dataset in user_datasets %}
-<div class="modal fade" id="shareModal{{ dataset.id }}" tabindex="-1" aria-labelledby="shareModalLabel{{ dataset.id }}" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="shareModalLabel{{ dataset.id }}">Share: {{ dataset.name }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="POST" action="{{ url_for('share_dataset', dataset_id=dataset.id) }}">
-                <div class="modal-body">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <div class="mb-3">
-                        <label for="email{{ dataset.id }}" class="form-label">Share with:</label>
-                        <input type="email" class="form-control" id="email{{ dataset.id }}" name="email" required placeholder="Enter email address">
-                    </div>
-                    <div class="mb-3">
-                        <label for="permission{{ dataset.id }}" class="form-label">Permission Level:</label>
-                        <select class="form-select" id="permission{{ dataset.id }}" name="permission">
-                            <option value="read">Read Only</option>
-                            <option value="edit">Read & Edit</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Share</button>
-                </div>
-            </form>
+<div
+  class="modal fade"
+  id="shareModal{{ dataset.id }}"
+  tabindex="-1"
+  aria-labelledby="shareModalLabel{{ dataset.id }}"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="shareModalLabel{{ dataset.id }}">
+          Share: {{ dataset.name }}
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <form
+        method="POST"
+        action="{{ url_for('share_dataset', dataset_id=dataset.id) }}"
+      >
+        <div class="modal-body">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <div class="mb-3">
+            <label for="email{{ dataset.id }}" class="form-label"
+              >Share with:</label
+            >
+            <input
+              type="email"
+              class="form-control"
+              id="email{{ dataset.id }}"
+              name="email"
+              required
+              placeholder="Enter email address"
+            />
+          </div>
+          <div class="mb-3">
+            <label for="permission{{ dataset.id }}" class="form-label"
+              >Permission Level:</label
+            >
+            <select
+              class="form-select"
+              id="permission{{ dataset.id }}"
+              name="permission"
+            >
+              <option value="read">Read Only</option>
+              <option value="edit">Read & Edit</option>
+            </select>
+          </div>
         </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary">Share</button>
+        </div>
+      </form>
     </div>
+  </div>
 </div>
 {% endfor %}
 
@@ -289,34 +402,37 @@
 </script>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Select all dropdown toggles in tables
-        const dropdownToggles = document.querySelectorAll('.table .dropdown-toggle');
-        
-        dropdownToggles.forEach(toggle => {
-            toggle.addEventListener('click', function(e) {
-                // Give the browser a moment to render the dropdown
-                setTimeout(function() {
-                    const dropdown = document.querySelector('.table .dropdown-menu.show');
-                    if (dropdown) {
-                        // Get position of the toggle button
-                        const rect = toggle.getBoundingClientRect();
-                        
-                        // Position the dropdown relative to the button
-                        dropdown.style.position = 'fixed';
-                        dropdown.style.top = (rect.bottom + 5) + 'px';
-                        dropdown.style.left = (rect.left - dropdown.offsetWidth + rect.width) + 'px';
-                        
-                        // Force it to be visible
-                        dropdown.style.display = 'block';
-                        dropdown.style.opacity = '1';
-                        dropdown.style.visibility = 'visible';
-                        dropdown.style.zIndex = '9999';
-                    }
-                }, 10);
-            });
-        });
+  document.addEventListener("DOMContentLoaded", function () {
+    // Select all dropdown toggles in tables
+    const dropdownToggles = document.querySelectorAll(
+      ".table .dropdown-toggle"
+    );
+
+    dropdownToggles.forEach((toggle) => {
+      toggle.addEventListener("click", function (e) {
+        // Give the browser a moment to render the dropdown
+        setTimeout(function () {
+          const dropdown = document.querySelector(".table .dropdown-menu.show");
+          if (dropdown) {
+            // Get position of the toggle button
+            const rect = toggle.getBoundingClientRect();
+
+            // Position the dropdown relative to the button
+            dropdown.style.position = "fixed";
+            dropdown.style.top = rect.bottom + 5 + "px";
+            dropdown.style.left =
+              rect.left - dropdown.offsetWidth + rect.width + "px";
+
+            // Force it to be visible
+            dropdown.style.display = "block";
+            dropdown.style.opacity = "1";
+            dropdown.style.visibility = "visible";
+            dropdown.style.zIndex = "9999";
+          }
+        }, 10);
+      });
     });
+  });
 </script>
 
 {% endblock %}

@@ -183,9 +183,8 @@ class SharedDataset(db.Model):
     shared_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     shared_with_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
-    dataset = db.relationship('Dataset', backref='shared_dataset_link')
+    dataset = db.relationship('Dataset', backref='shared_dataset_link', overlaps="shared_with,dataset_shared_with")
     shared_by = db.relationship('User', foreign_keys=[shared_by_id])
-    #silence the warning by telling SQLAlchemy they’re intentionally overlapping:
     shared_with = db.relationship('User', foreign_keys=[shared_with_id], overlaps="shared_user,shared_datasets")
 
 class PasswordResetToken(db.Model):

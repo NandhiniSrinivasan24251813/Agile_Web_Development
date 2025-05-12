@@ -2151,6 +2151,7 @@ html:not([data-theme="dark"]) {
 [data-theme="dark"] .modal-content {
   background-color: var(--bg-primary);
   border-color: var(--border-color);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.8);
 }
 
 [data-theme="dark"] .modal-header,
@@ -2356,4 +2357,19 @@ body {
   flex: 1;
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
+}
+
+/* Modal styling for improved visibility */
+.modal-backdrop {
+  opacity: 0.95 !important; /* Balanced opacity for good contrast */
+}
+
+.modal-content {
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="dark"] .modal-content {
+  background-color: var(--bg-primary);
+  border-color: var(--border-color);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.8);
 }

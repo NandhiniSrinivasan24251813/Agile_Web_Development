@@ -69,7 +69,7 @@ login_manager.login_view = 'login'
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
 
 # --------------------------------------------
 # Routes
@@ -116,7 +116,7 @@ def send_welcome_email(user_email, username):
 
             Thank you for signing up with us!
 
-            We’re excited to have you on board. If you have any questions, feel free to reach out.
+            We're excited to have you on board. If you have any questions, feel free to reach out.
 
             Best regards,  
             The Team
@@ -201,7 +201,7 @@ def verify_otp():
         
         if user_id:
             # Fetch user based on the stored user ID
-            user = User.query.get(user_id)
+            user = db.session.get(User, user_id)
             
             if user and user.otp == entered_otp:
                 login_user(user)
@@ -229,7 +229,7 @@ def login():
             login_user(user, remember=remember)
 
             # Update last login time
-            user.last_login = datetime.utcnow()
+            user.last_login = datetime.now(datetime.UTC)
             db.session.commit()
 
             # Insert into AuditLog
@@ -278,8 +278,8 @@ def forgot_password():
             reset_token = PasswordResetToken(
                 user_id=user.id,
                 token=token,
-                created_at=datetime.utcnow(),
-                expires_at=datetime.utcnow()
+                created_at=datetime.now(datetime.UTC),
+                expires_at=datetime.now(datetime.UTC)
             )
             db.session.add(reset_token)
             db.session.commit()
@@ -317,7 +317,7 @@ def reset_password(token):
         flash('Invalid or expired token', 'error')
         return redirect(url_for('login'))
 
-    user = User.query.get(reset_token.user_id)
+    user = db.session.get(User, reset_token.user_id)
 
     if request.method == 'POST':
         new_password = request.form.get('password')
@@ -515,7 +515,7 @@ def edit_profile():
         current_user.address = form.address.data
         current_user.postcode = form.postcode.data
         current_user.city = form.city.data
-        current_user.last_seen = datetime.utcnow()
+        current_user.last_seen = datetime.now(datetime.UTC)
 
         if form.profile_picture.data:
             picture_file = secure_filename(form.profile_picture.data.filename)
@@ -756,7 +756,7 @@ def upload():
 @login_required
 def export_dataset(dataset_id):
     # Get dataset
-    dataset = Dataset.query.get_or_404(dataset_id)
+    dataset = db.session.get(Dataset, dataset_id)
     
     # Check permission
     is_owner = dataset.user_id == current_user.id
@@ -782,7 +782,7 @@ def export_dataset(dataset_id):
             return redirect(url_for('visualize', dataset_id=dataset_id))
         
         # Generate filename
-        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now(datetime.UTC).strftime('%Y%m%d_%H%M%S')
         base_name = os.path.splitext(dataset.original_filename)[0]
         
         if export_format == 'csv':
@@ -840,7 +840,7 @@ def export_dataset(dataset_id):
 
 @app.route('/visualize/<int:dataset_id>')
 def visualize(dataset_id):
-    dataset = Dataset.query.get_or_404(dataset_id)
+    dataset = db.session.get(Dataset, dataset_id)
 
     # Check access permissions
     is_owner = current_user.is_authenticated and dataset.user_id == current_user.id
@@ -939,7 +939,7 @@ def visualize(dataset_id):
 @login_required
 def debug_file(dataset_id):
     # Check if user is admin or file owner
-    dataset = Dataset.query.get_or_404(dataset_id)
+    dataset = db.session.get(Dataset, dataset_id)
     
     if dataset.user_id != current_user.id:
         flash('Access denied.', 'error')
@@ -991,7 +991,7 @@ def debug_file(dataset_id):
 @app.route('/delete_dataset/<int:dataset_id>', methods=['POST'])
 @login_required
 def delete_dataset(dataset_id):
-    dataset = Dataset.query.get_or_404(dataset_id)
+    dataset = db.session.get(Dataset, dataset_id)
     
     # Check permissions
     if dataset.user_id != current_user.id:
@@ -1059,7 +1059,7 @@ def share_dataset(dataset_id):
 @app.route('/charts/<int:dataset_id>')
 @login_required
 def view_charts(dataset_id):
-    dataset = Dataset.query.get_or_404(dataset_id)
+    dataset = db.session.get(Dataset, dataset_id)
 
     # Permission check
     is_owner = dataset.user_id == current_user.id
@@ -1117,7 +1117,7 @@ def process_batch(records, dataset_id, user_id):
             epidemic_records.append(epidemic_record)
         
         if any(rec.latitude is not None and rec.longitude is not None for rec in epidemic_records):
-            dataset = Dataset.query.get(dataset_id)
+            dataset = db.session.get(Dataset, dataset_id)
             if dataset:
                 dataset.has_geo = True
                 db.session.commit()
