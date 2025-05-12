@@ -6,7 +6,7 @@ from forms import EditProfileForm
 from werkzeug.utils import secure_filename
 from . import profile_bp
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 @profile_bp.route('/profile')
@@ -165,7 +165,7 @@ def edit_profile():
         current_user.address = form.address.data
         current_user.postcode = form.postcode.data
         current_user.city = form.city.data
-        current_user.last_seen = datetime.now(datetime.UTC)
+        current_user.last_seen = datetime.now(timezone.utc)
 
         if form.profile_picture.data:
             picture_file = secure_filename(form.profile_picture.data.filename)

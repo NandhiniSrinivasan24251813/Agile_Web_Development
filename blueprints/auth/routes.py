@@ -204,8 +204,8 @@ def forgot_password():
             reset_token = PasswordResetToken(
                 user_id=user.id,
                 token=token,
-                created_at=datetime.now(datetime.UTC),
-                expires_at=datetime.now(datetime.UTC)
+                created_at=datetime.now(timezone.utc),
+                expires_at=datetime.now(timezone.utc)
             )
             db.session.add(reset_token)
             db.session.commit()
