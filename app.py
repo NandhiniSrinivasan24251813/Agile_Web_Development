@@ -2,7 +2,7 @@ from flask import Flask, render_template, redirect, send_file, url_for, flash, r
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 from models import db, User, AuditLog
 from flask_wtf.csrf import CSRFProtect
-from datetime import datetime
+from datetime import datetime, timezone
 from flask_migrate import Migrate
 from flask import abort
 from models import db, User, AuditLog, PasswordResetToken, Dataset, EpidemicRecord, SharedDataset
@@ -229,7 +229,7 @@ def login():
             login_user(user, remember=remember)
 
             # Update last login time
-            user.last_login = datetime.now(datetime.UTC)
+            user.last_login = datetime.now(timezone.utc)
             db.session.commit()
 
             # Insert into AuditLog
@@ -760,7 +760,7 @@ def export_dataset(dataset_id):
     
     # Check permission
     is_owner = dataset.user_id == current_user.id
-    is_shared = SharedDataset.query.filter_by(dataset_id=dataset_id, shared_with_id=current_user.id, can_download=True).first() is not None
+    is_shared = SharedDataset.query.filter_by(dataset_id=dataset_id, shared_with_id=current_user.id).first() is not None
     is_public = dataset.sharing_status == 'public'
     
     if not (is_owner or is_shared or is_public):
@@ -782,7 +782,7 @@ def export_dataset(dataset_id):
             return redirect(url_for('visualize', dataset_id=dataset_id))
         
         # Generate filename
-        timestamp = datetime.now(datetime.UTC).strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
         base_name = os.path.splitext(dataset.original_filename)[0]
         
         if export_format == 'csv':
