@@ -91,23 +91,6 @@
         animation: fadeInUp 0.8s ease forwards 0.2s;
         text-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
       }
-      /* Reduced spacing in navbar */
-      .small-navbar .nav-link {
-      font-size: 0.95rem;
-      padding-left: 0.5rem;
-      padding-right: 0.5rem;
-      padding-top: 0.25rem;
-      padding-bottom: 0.25rem;
-     }
-     /* Remove underline on navbar links */
-      .navbar .nav-link {
-        text-decoration: none !important;
-      }
-
-      /* Prevent underline on hover */
-      .navbar .nav-link:hover {
-        text-decoration: none !important;
-      }
 
       [data-theme="dark"] .loading-title {
         background: linear-gradient(
@@ -502,12 +485,12 @@
               {% if current_user.is_authenticated %}
               <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('dashboard') }}">
-                  <i class="bi bi-speedometer2"></i> Dashboard
+                  <i class="bi bi-speedometer2 me-1"></i>Dashboard
                 </a>
               </li>
               <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('upload') }}">
-                  <i class="bi bi-cloud-upload"></i> Upload
+                  <i class="bi bi-cloud-upload me-1"></i>Upload
                 </a>
               </li>
               <li class="nav-item dropdown">
@@ -517,23 +500,23 @@
                   role="button"
                   data-bs-toggle="dropdown"
                 >
-                  <i class="bi bi-person-circle"></i> {{
+                  <i class="bi bi-person-circle me-1"></i>{{
                   current_user.username }}
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end">
                   <li>
                     <a class="dropdown-item" href="{{ url_for('profile') }}">
-                      <i class="bi bi-person"></i> Profile
+                      <i class="bi bi-person me-2"></i>Profile
                     </a>
                   </li>
                   <li>
                     <a class="dropdown-item" href="{{ url_for('settings') }}">
-                      <i class="bi bi-gear me-2"></i> Settings
+                      <i class="bi bi-gear me-2"></i>Settings
                     </a>
                   </li>
                   <li>
                     <a class="dropdown-item" href="{{ url_for('help') }}">
-                      <i class="bi bi-question-circle me-2"></i> Help & Support
+                      <i class="bi bi-question-circle me-2"></i>Help & Support
                     </a>
                   </li>
                   <li><hr class="dropdown-divider" /></li>
@@ -542,7 +525,7 @@
                       class="dropdown-item text-danger"
                       href="{{ url_for('logout') }}"
                     >
-                      <i class="bi bi-box-arrow-right me-2"></i> Logout
+                      <i class="bi bi-box-arrow-right me-2"></i>Logout
                     </a>
                   </li>
                 </ul>
@@ -550,12 +533,12 @@
               {% else %}
               <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('login') }}">
-                  <i class="bi bi-box-arrow-in-right me-1"></i> Login
+                  <i class="bi bi-box-arrow-in-right me-1"></i>Login
                 </a>
               </li>
               <li class="nav-item">
                 <a class="nav-link" href="{{ url_for('signup') }}">
-                  <i class="bi bi-person-plus me-1"></i> Sign Up
+                  <i class="bi bi-person-plus me-1"></i>Sign Up
                 </a>
               </li>
               {% endif %}
