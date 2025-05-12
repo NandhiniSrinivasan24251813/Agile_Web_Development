@@ -13,7 +13,7 @@
         <div class="card-body">
             <h3 class="card-title text-center mb-4">Verify OTP</h3>
 
-            <form method="POST" action="{{ url_for('verify_otp') }}">
+            <form method="POST" action="{{ url_for('auth.verify_otp') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 
                 <div class="mb-3">

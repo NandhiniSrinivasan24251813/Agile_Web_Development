@@ -467,7 +467,7 @@
         <div class="container">
           <a
             class="navbar-brand d-flex align-items-center"
-            href="{{ url_for('index') }}"
+            href="{{ url_for('main.index') }}"
           >
             <i class="bi bi-virus me-2"></i>
             EMS
@@ -484,12 +484,12 @@
             <ul class="navbar-nav ms-auto">
               {% if current_user.is_authenticated %}
               <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('dashboard') }}">
+                <a class="nav-link" href="{{ url_for('main.dashboard') }}">
                   <i class="bi bi-speedometer2 me-1"></i>Dashboard
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('upload') }}">
+                <a class="nav-link" href="{{ url_for('data.upload') }}">
                   <i class="bi bi-cloud-upload me-1"></i>Upload
                 </a>
               </li>
@@ -505,17 +505,17 @@
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end">
                   <li>
-                    <a class="dropdown-item" href="{{ url_for('profile') }}">
+                    <a class="dropdown-item" href="{{ url_for('profile.profile') }}">
                       <i class="bi bi-person me-2"></i>Profile
                     </a>
                   </li>
                   <li>
-                    <a class="dropdown-item" href="{{ url_for('settings') }}">
+                    <a class="dropdown-item" href="{{ url_for('profile.settings') }}">
                       <i class="bi bi-gear me-2"></i>Settings
                     </a>
                   </li>
                   <li>
-                    <a class="dropdown-item" href="{{ url_for('help') }}">
+                    <a class="dropdown-item" href="{{ url_for('main.help') }}">
                       <i class="bi bi-question-circle me-2"></i>Help & Support
                     </a>
                   </li>
@@ -523,7 +523,7 @@
                   <li>
                     <a
                       class="dropdown-item text-danger"
-                      href="{{ url_for('logout') }}"
+                      href="{{ url_for('auth.logout') }}"
                     >
                       <i class="bi bi-box-arrow-right me-2"></i>Logout
                     </a>
@@ -532,12 +532,12 @@
               </li>
               {% else %}
               <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('login') }}">
+                <a class="nav-link" href="{{ url_for('auth.login') }}">
                   <i class="bi bi-box-arrow-in-right me-1"></i>Login
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('signup') }}">
+                <a class="nav-link" href="{{ url_for('auth.signup') }}">
                   <i class="bi bi-person-plus me-1"></i>Sign Up
                 </a>
               </li>

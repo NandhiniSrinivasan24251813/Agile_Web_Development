@@ -71,7 +71,7 @@ endblock %} {% block content %}
                   features of the platform.
                 </p>
                 <a
-                  href="{{ url_for('signup') }}"
+                  href="{{ url_for('auth.signup') }}"
                   class="btn btn-outline-primary btn-sm"
                   >Sign Up</a
                 >
@@ -90,7 +90,7 @@ endblock %} {% block content %}
                   <li>Optional: Deaths, Recovered, Latitude, Longitude</li>
                 </ul>
                 <a
-                  href="{{ url_for('upload') }}"
+                  href="{{ url_for('data.upload') }}"
                   class="btn btn-outline-primary btn-sm"
                   >Upload Data</a
                 >
@@ -103,7 +103,7 @@ endblock %} {% block content %}
                   charts, and analyze trends.
                 </p>
                 <a
-                  href="{{ url_for('dashboard') }}"
+                  href="{{ url_for('main.dashboard') }}"
                   class="btn btn-outline-primary btn-sm"
                   >Go to Dashboard</a
                 >
@@ -220,7 +220,7 @@ endblock %} {% block content %}
                       <ol>
                         <li>
                           Go to the
-                          <a href="{{ url_for('upload') }}">Upload</a> page
+                          <a href="{{ url_for('data.upload') }}">Upload</a> page
                         </li>
                         <li>Drag and drop your file or click to browse</li>
                         <li>

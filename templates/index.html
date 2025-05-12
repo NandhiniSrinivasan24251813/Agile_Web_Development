@@ -14,7 +14,7 @@ endblock %} {% block content %}
         </p>
         <div class="d-grid gap-2 d-md-flex justify-content-md-start">
           <a
-            href="{{ url_for('signup') }}"
+            href="{{ url_for('auth.signup') }}"
             class="btn btn-light btn-lg px-4 me-md-2"
             >Get Started</a
           >
@@ -213,10 +213,10 @@ endblock %} {% block content %}
       experts, and help protect communities worldwide.
     </p>
     <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
-      <a href="{{ url_for('signup') }}" class="btn btn-light btn-lg px-4 gap-3"
+      <a href="{{ url_for('auth.signup') }}" class="btn btn-light btn-lg px-4 gap-3"
         >Create Account</a
       >
-      <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-lg px-4"
+      <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-lg px-4"
         >Sign In</a
       >
     </div>
