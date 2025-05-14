@@ -339,14 +339,17 @@ System{% endblock %} {% block extra_css %}
             <label for="email{{ dataset.id }}" class="form-label"
               >Share with:</label
             >
-            <input
-              type="email"
-              class="form-control"
-              id="email{{ dataset.id }}"
-              name="email"
-              required
-              placeholder="Enter email address"
-            />
+            <select name="username" class="form-select" id="username{{ dataset.id }}" required>
+              <option value="">-- Select User --</option>
+              {% for user in all_users %}
+                {% if user.id != current_user.id %}
+                  <option value="{{ user.username }}">{{ user.username }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+            
+            
+            
           </div>
           <div class="mb-3">
             <label for="permission{{ dataset.id }}" class="form-label"

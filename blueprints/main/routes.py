@@ -25,7 +25,13 @@ def dashboard():
 
     user_datasets = Dataset.query.filter_by(user_id=current_user.id).order_by(Dataset.upload_date.desc()).all()
     
-
+    all_users = User.query.all()  ## All users
+    return render_template(
+        'dashboard.html',
+        user_datasets=user_datasets,
+        shared_datasets=shared_datasets,
+        all_users=all_users
+    )
     # # Combine both lists
     # combined_datasets = list(chain(user_datasets, shared_datasets))
     # Print for debugging

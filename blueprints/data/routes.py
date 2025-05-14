@@ -449,29 +449,52 @@ def delete_dataset(dataset_id):
         
     return redirect(url_for('main.dashboard'))
 
+# Share Dataset by User Route
 @data_bp.route('/share/<int:dataset_id>', methods=['POST'])
 @login_required
-# @csrf.exempt
 def share_dataset(dataset_id):
-    email = request.form['email']
-    permission = request.form.get('permission', 'read')
-    
-    # Find the user by email
-    user_to_share = User.query.filter_by(email=email).first()
+    username = request.form.get('username')  # User name from dropdown
+
+    # Find the user by username
+    user_to_share = User.query.filter_by(username=username).first()
+
     if user_to_share:
-        shared = SharedDataset(
-            # owner_id=current_user.id,
-            shared_by_id = current_user.id,
-            shared_with_id=user_to_share.id,
+        # Ignore duplicate shares
+        already_shared = SharedDataset.query.filter_by(
             dataset_id=dataset_id,
-        )
-        db.session.add(shared)
-        db.session.commit()
-        flash(f"Dataset shared with {email}.", "success")
+            shared_with_id=user_to_share.id
+        ).first()
+
+        if already_shared:
+            flash(f"Dataset is already shared with {username}.", "info")
+        else:
+            shared = SharedDataset(
+                shared_by_id=current_user.id,
+                shared_with_id=user_to_share.id,
+                dataset_id=dataset_id
+            )
+            db.session.add(shared)
+            db.session.commit()
+
+            #  Audit Log
+            audit = AuditLog(
+                user_id=current_user.id,
+                action='share_dataset',
+                target_type='Dataset',
+                target_id=dataset_id,
+                timestamp=datetime.utcnow(),
+                details=f"Shared dataset {dataset_id} with {user_to_share.username} (user_id={user_to_share.id})"
+            )
+            db.session.add(audit)
+            db.session.commit()
+
+            flash(f"Dataset shared with {username}.", "success")
     else:
         flash("User not found.", "danger")
-    
+
     return redirect(url_for('main.dashboard'))
+
+
 
 
 # Charts Route
