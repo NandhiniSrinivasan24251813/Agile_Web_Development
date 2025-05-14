@@ -173,7 +173,7 @@ def login():
             next_page = request.args.get('next')
             if next_page:
                 return redirect(next_page)
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('main.dashboard'))
         else:
             flash('Invalid username or password', 'error')
 
@@ -184,7 +184,7 @@ def login():
 def logout():
     logout_user()
     flash('You have been logged out', 'info')
-    return redirect(url_for('index'))
+    return redirect(url_for('main.index'))
 
 
 

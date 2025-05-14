@@ -183,6 +183,16 @@ System{% endblock %} {% block extra_css %}
             {% for dataset in shared_datasets %}
             <tr>
               <td>
+                <div class="btn-group btn-group-sm">
+                  <a
+                    href="{{ url_for('data.visualize', dataset_id=dataset.id) }}"
+                    class="btn btn-primary"
+                  >
+                    <i class="bi bi-graph-up"></i> View
+                  </a>
+                </div>
+              </td>
+              <td>
                 <strong>{{ dataset.name }}</strong>
                 <div class="small text-muted">
                   {{ dataset.description|truncate(50) }}
@@ -201,16 +211,7 @@ System{% endblock %} {% block extra_css %}
               <td class="text-nowrap">
                 {{ dataset.upload_date.strftime('%Y-%m-%d') }}
               </td>
-              <td>
-                <div class="btn-group btn-group-sm">
-                  <a
-                    href="{{ url_for('data.visualize', dataset_id=dataset.id) }}"
-                    class="btn btn-primary"
-                  >
-                    <i class="bi bi-graph-up"></i> View
-                  </a>
-                </div>
-              </td>
+              
             </tr>
             {% endfor %}
           </table>
@@ -339,14 +340,17 @@ System{% endblock %} {% block extra_css %}
             <label for="email{{ dataset.id }}" class="form-label"
               >Share with:</label
             >
-            <input
-              type="email"
-              class="form-control"
-              id="email{{ dataset.id }}"
-              name="email"
-              required
-              placeholder="Enter email address"
-            />
+            <select name="username" class="form-select" id="username{{ dataset.id }}" required>
+              <option value="">-- Select User --</option>
+              {% for user in all_users %}
+                {% if user.id != current_user.id %}
+                  <option value="{{ user.username }}">{{ user.username }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+            
+            
+            
           </div>
           <div class="mb-3">
             <label for="permission{{ dataset.id }}" class="form-label"
