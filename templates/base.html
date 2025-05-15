@@ -248,6 +248,103 @@
         transition: transform 0.5s ease;
       }
 
+      /* Hamburger icon theming */
+      .navbar-toggler {
+        border: 1px solid var(--border-color);
+        background-color: transparent;
+        padding: 0.5rem;
+        width: 44px;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        border-radius: 4px;
+      }
+
+      /* Custom hamburger icon that respects theme */
+      .navbar-toggler-icon {
+        display: block;
+        position: relative;
+        width: 20px;
+        height: 20px;
+      }
+
+      .navbar-toggler-icon span,
+      .navbar-toggler-icon::before,
+      .navbar-toggler-icon::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background-color: var(--text-primary);
+        transition: all 0.3s ease;
+      }
+
+      .navbar-toggler-icon::before {
+        top: 4px;
+      }
+
+      .navbar-toggler-icon span {
+        top: 9px;
+      }
+
+      .navbar-toggler-icon::after {
+        top: 14px;
+      }
+
+      /* Styling for toggler when expanded */
+      .navbar-toggler[aria-expanded="true"] .navbar-toggler-icon::before {
+        transform: translateY(5px) rotate(45deg);
+      }
+
+      .navbar-toggler[aria-expanded="true"] .navbar-toggler-icon span {
+        opacity: 0;
+      }
+
+      .navbar-toggler[aria-expanded="true"] .navbar-toggler-icon::after {
+        transform: translateY(-5px) rotate(-45deg);
+      }
+
+      /* Dark theme specific styles */
+      [data-theme="dark"] .navbar {
+        background-color: #1e1e1e !important;
+      }
+
+      [data-theme="dark"] .navbar-brand,
+      [data-theme="dark"] .nav-link {
+        color: #ffffff !important;
+      }
+
+      [data-theme="dark"] .navbar-toggler {
+        border-color: #333333;
+      }
+
+      [data-theme="dark"] .navbar-toggler-icon::before,
+      [data-theme="dark"] .navbar-toggler-icon::after,
+      [data-theme="dark"] .navbar-toggler-icon span {
+        background-color: #ffffff;
+      }
+
+      [data-theme="dark"] .navbar.bg-light {
+        background-color: #121212 !important;
+      }
+
+      [data-theme="dark"] .dropdown-menu {
+        background-color: #1e1e1e;
+        border-color: #333333;
+      }
+
+      [data-theme="dark"] .dropdown-item {
+        color: #ffffff;
+      }
+
+      [data-theme="dark"] .dropdown-item:hover,
+      [data-theme="dark"] .dropdown-item:focus {
+        background-color: #333333;
+      }
+
       .btn-action,
       .btn-action i {
         color: #fff !important;
@@ -451,17 +548,7 @@
     </div>
 
     <!-- Main Content -->
-    <div
-      class="main-content"
-      {%
-      if
-      request.path
-      !="/"
-      %}style="display: block;"
-      {%
-      endif
-      %}
-    >
+    <div class="main-content" style="display: block">
       <!-- Modern Navbar -->
       <nav class="navbar navbar-expand-lg navbar-light bg-light sticky-top">
         <div class="container">
@@ -477,8 +564,13 @@
             type="button"
             data-bs-toggle="collapse"
             data-bs-target="#navbarNav"
+            aria-controls="navbarNav"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
           >
-            <span class="navbar-toggler-icon"></span>
+            <div class="navbar-toggler-icon">
+              <span></span>
+            </div>
           </button>
           <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
@@ -505,12 +597,18 @@
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end">
                   <li>
-                    <a class="dropdown-item" href="{{ url_for('profile.profile') }}">
+                    <a
+                      class="dropdown-item"
+                      href="{{ url_for('profile.profile') }}"
+                    >
                       <i class="bi bi-person me-2"></i>Profile
                     </a>
                   </li>
                   <li>
-                    <a class="dropdown-item" href="{{ url_for('profile.settings') }}">
+                    <a
+                      class="dropdown-item"
+                      href="{{ url_for('profile.settings') }}"
+                    >
                       <i class="bi bi-gear me-2"></i>Settings
                     </a>
                   </li>
@@ -673,98 +771,204 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/dropdown-handler.js') }}"></script>
 
-    <!-- Loading Screen Script -->
+    <!-- Loading Screen & Theme Script -->
     <script>
       document.addEventListener("DOMContentLoaded", function () {
         const loadingScreen = document.querySelector(".loading-screen");
         const mainContent = document.querySelector(".main-content");
-
-        // Only show full loading animation on homepage
-        if (
-          window.location.pathname === "/" ||
-          window.location.pathname === ""
-        ) {
-          // On homepage, show the loading screen
-          loadingScreen.style.display = "flex";
-          mainContent.style.display = "none";
-
-          // Hide loading screen after 3 seconds with smooth transition
-          setTimeout(function () {
-            // Start fading out loading screen
-            loadingScreen.style.opacity = "0";
-
-            // Add fade-in class to main content for smooth appearance
-            setTimeout(function () {
-              // Set up main content with initial styles for animation
-              mainContent.style.display = "block";
-              mainContent.style.opacity = "0";
-              mainContent.style.transform = "translateY(20px)";
-              mainContent.style.transition =
-                "opacity 0.8s ease-out, transform 0.8s ease-out";
-
-              // Force browser to acknowledge the style changes before animating
-              setTimeout(function () {
-                // Make body visible and animate main content
-                document.body.style.visibility = "visible";
-                mainContent.style.opacity = "1";
-                mainContent.style.transform = "translateY(0)";
-
-                // Hide loading screen completely after transition
-                setTimeout(function () {
-                  loadingScreen.style.display = "none";
-                }, 800);
-              }, 50);
-            }, 300);
-          }, 3000);
-        } else {
-          // On other pages, immediately hide loading and show content
-          loadingScreen.style.display = "none";
-          mainContent.style.display = "block";
-          // Make body visible immediately
-          document.body.style.visibility = "visible";
-        }
-      });
-    </script>
-
-    <!-- Theme Toggle Script -->
-    <script>
-      // Theme settings
-      document.addEventListener("DOMContentLoaded", function () {
+        const currentPath = "{{ request.path }}";
         const toggleButton = document.getElementById("theme-toggle");
         const icon = toggleButton.querySelector("i");
-        let currentTheme = localStorage.getItem("theme") || "light";
 
-        // Immediately apply the saved theme to prevent flashing
+        // Detect stored theme or system preference
+        let currentTheme = localStorage.getItem("theme");
+        const systemPrefersDark = window.matchMedia(
+          "(prefers-color-scheme: dark)"
+        ).matches;
+
+        // Set default theme if none is stored
+        if (!currentTheme) {
+          currentTheme = systemPrefersDark ? "dark" : "light";
+        }
+
+        // Apply theme immediately to prevent flashing
         document.documentElement.setAttribute("data-theme", currentTheme);
         updateIcon(currentTheme);
+        updateNavbarStyle(currentTheme);
 
-        // Add transition class to body
-        document.body.classList.add("theme-transition");
+        // Now make the body visible
+        document.body.style.visibility = "visible";
 
-        // Note: We don't set visibility here anymore
-        // This is now handled by the loading screen script
-
+        // Handle theme toggle
         toggleButton.addEventListener("click", function () {
-          if (currentTheme === "light") {
-            currentTheme = "dark";
-          } else {
-            currentTheme = "light";
-          }
+          const oldTheme = currentTheme;
+          currentTheme = currentTheme === "dark" ? "light" : "dark";
 
-          // Animate theme change
-          document.body.classList.add("theme-transition");
+          // Update theme
           document.documentElement.setAttribute("data-theme", currentTheme);
           localStorage.setItem("theme", currentTheme);
           updateIcon(currentTheme);
+
+          // If switching to light mode from dark, use the reset function
+          if (
+            oldTheme === "dark" &&
+            currentTheme === "light" &&
+            typeof window.resetToLightMode === "function"
+          ) {
+            window.resetToLightMode();
+            return; // Skip other theme handling since resetToLightMode does it all
+          }
+
+          // Otherwise apply the theme normally
+          applyTheme(currentTheme);
+          updateNavbarStyle(currentTheme);
         });
 
+        // Update icon based on theme
         function updateIcon(theme) {
+          icon.className = theme === "dark" ? "fas fa-sun" : "fas fa-moon";
+        }
+
+        // Update navbar styling based on theme
+        function updateNavbarStyle(theme) {
+          const navbar = document.querySelector(".navbar");
           if (theme === "dark") {
-            icon.className = "fas fa-sun"; // Show sun in dark mode
+            navbar.classList.remove("navbar-light", "bg-light");
+            navbar.classList.add("navbar-dark", "bg-dark");
           } else {
-            icon.className = "fas fa-moon"; // Show moon in light mode
+            navbar.classList.remove("navbar-dark", "bg-dark");
+            navbar.classList.add("navbar-light", "bg-light");
           }
+        }
+
+        // Apply theme changes to all elements
+        function applyTheme(theme) {
+          const isDark = theme === "dark";
+
+          // Apply styles to body
+          document.body.style.backgroundColor = isDark ? "#121212" : "";
+          document.body.style.color = isDark ? "#ffffff" : "";
+
+          // Apply to cards
+          document.querySelectorAll(".card").forEach((card) => {
+            card.style.backgroundColor = isDark ? "#1e1e1e" : "";
+            card.style.color = isDark ? "#ffffff" : "";
+            card.style.borderColor = isDark ? "#333333" : "";
+          });
+
+          // Apply to card headers
+          document.querySelectorAll(".card-header").forEach((header) => {
+            header.style.backgroundColor = isDark ? "#121212" : "";
+            header.style.borderColor = isDark ? "#333333" : "";
+          });
+
+          // Apply to tables
+          document.querySelectorAll(".table").forEach((table) => {
+            table.style.backgroundColor = isDark ? "#1e1e1e" : "";
+            table.style.color = isDark ? "#ffffff" : "";
+            table.classList.toggle("table-dark-theme", isDark);
+
+            // Make sure to add or remove light theme class appropriately
+            if (isDark) {
+              table.classList.remove("table-light-theme");
+            } else {
+              table.classList.remove("table-dark-theme");
+              table.classList.add("table-light-theme");
+            }
+          });
+
+          // Apply to table rows and cells
+          document.querySelectorAll(".table tr").forEach((tr) => {
+            tr.style.backgroundColor = isDark ? "#1e1e1e" : "";
+            tr.style.color = isDark ? "#ffffff" : "";
+          });
+
+          document.querySelectorAll(".table td, .table th").forEach((cell) => {
+            cell.style.color = isDark ? "#ffffff" : "";
+            cell.style.borderColor = isDark ? "#333333" : "";
+          });
+
+          // Apply to checkboxes
+          document.querySelectorAll(".form-check-input").forEach((input) => {
+            input.style.backgroundColor = isDark ? "#121212" : "";
+            input.style.borderColor = isDark ? "#555555" : "";
+          });
+
+          // Apply to table responsive
+          document
+            .querySelectorAll(".table-responsive")
+            .forEach((container) => {
+              container.style.backgroundColor = isDark ? "#1e1e1e" : "";
+            });
+
+          // Force specific light mode styles when switching back to light theme
+          if (!isDark) {
+            document.querySelectorAll(".table").forEach((table) => {
+              table.style.backgroundColor = "#ffffff";
+              table.style.color = "#212529";
+            });
+
+            document.querySelectorAll(".table tbody tr").forEach((tr) => {
+              tr.style.backgroundColor = "#ffffff";
+              tr.style.color = "#212529";
+            });
+
+            document
+              .querySelectorAll(".table td, .table th")
+              .forEach((cell) => {
+                cell.style.color = "#212529";
+                cell.style.borderColor = "#dee2e6";
+              });
+
+            document.querySelectorAll(".card").forEach((card) => {
+              card.style.backgroundColor = "#ffffff";
+              card.style.color = "#212529";
+              card.style.borderColor = "rgba(0,0,0,.125)";
+            });
+
+            document.querySelectorAll(".card-header").forEach((header) => {
+              header.style.backgroundColor = "rgba(0,0,0,.03)";
+              header.style.borderColor = "rgba(0,0,0,.125)";
+            });
+
+            document.querySelectorAll(".form-check-input").forEach((input) => {
+              input.style.backgroundColor = "#fff";
+              input.style.borderColor = "#ced4da";
+            });
+          }
+        }
+
+        // Initialize theme on page load
+        applyTheme(currentTheme);
+
+        // Initial navbar styling
+        updateNavbarStyle(currentTheme);
+
+        // Hamburger icon animation on click
+        const navbarToggler = document.querySelector(".navbar-toggler");
+        if (navbarToggler) {
+          navbarToggler.addEventListener("click", function () {
+            const expanded = this.getAttribute("aria-expanded") === "true";
+            this.setAttribute("aria-expanded", !expanded);
+          });
+        }
+
+        // Handle loading screen
+        if (currentPath === "/") {
+          // On homepage, show loading screen for 3 seconds
+          setTimeout(function () {
+            loadingScreen.style.opacity = "0";
+            setTimeout(function () {
+              loadingScreen.style.display = "none";
+              mainContent.style.display = "block";
+            }, 500);
+          }, 3000);
+        } else {
+          // On other pages, immediately hide loading screen
+          loadingScreen.style.display = "none";
+          mainContent.style.display = "block";
         }
 
         // Initialize loading overlay for forms
@@ -776,6 +980,7 @@
         });
       });
 
+      // Loading overlay functions
       function showLoadingOverlay() {
         const overlay = document.getElementById("loading-overlay");
         overlay.style.display = "flex";
@@ -791,10 +996,7 @@
           overlay.style.display = "none";
         }, 300);
       }
-    </script>
 
-    <!-- Loading state management -->
-    <script>
       function showLoading() {
         document.getElementById("loading-overlay").style.display = "flex";
       }
@@ -802,16 +1004,6 @@
       function hideLoading() {
         document.getElementById("loading-overlay").style.display = "none";
       }
-
-      // Add loading state to forms
-      document.addEventListener("DOMContentLoaded", function () {
-        const forms = document.querySelectorAll("form");
-        forms.forEach((form) => {
-          form.addEventListener("submit", function () {
-            showLoading();
-          });
-        });
-      });
     </script>
     {% block extra_js %}{% endblock %}
   </body>

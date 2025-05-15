@@ -1,8 +1,5 @@
-{% extends 'base.html' %}
-
-{% block title %}Visualize: {{ dataset.name }} - EMS{% endblock %}
-
-{% block extra_css %}
+{% extends 'base.html' %} {% block title %}Visualize: {{ dataset.name }} - EMS{%
+endblock %} {% block extra_css %}
 <!-- Leaflet CSS -->
 <link
   rel="stylesheet"
@@ -12,22 +9,28 @@
 />
 
 <!-- Leaflet Marker Cluster -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css"
+/>
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css"
+/>
 
 <!-- Custom CSS -->
-<link rel="stylesheet" href="{{ url_for('static', filename='css/map.css') }}"/>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/map.css') }}" />
 
 <style>
   .tab-content {
     padding-top: 1rem;
   }
-  
+
   .chart-container {
     height: 300px;
     margin-bottom: 1rem;
   }
-  
+
   .map-controls {
     margin-bottom: 1rem;
     display: flex;
@@ -36,177 +39,336 @@
     align-items: center;
     justify-content: space-between;
   }
-  
+
   .map-type-toggle {
     display: flex;
   }
-  
+
   .map-type-toggle .btn {
     padding: 0.3rem 0.6rem;
     font-size: 0.875rem;
   }
-  
+
   /* Responsive adjustments */
   @media (max-width: 768px) {
     .chart-container {
       height: 250px;
     }
-    
+
     .map-controls {
       flex-direction: column;
       align-items: stretch;
     }
-    
+
     .map-type-toggle {
       margin-top: 0.5rem;
     }
   }
-  
+
   /* Essential map container styling */
   #map {
     height: 500px;
     width: 100%;
     border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Dark theme table styles - with stronger selectors */
+  [data-theme="dark"] .table,
+  [data-theme="dark"] .table-responsive .table,
+  [data-theme="dark"] .card .table {
+    background-color: #1e1e1e !important;
+    color: #ffffff !important;
+  }
+
+  [data-theme="dark"] .table thead th,
+  [data-theme="dark"] .table-responsive .table thead th,
+  [data-theme="dark"] .card .table thead th {
+    background-color: #121212 !important;
+    color: #ffffff !important;
+    border-color: #333333 !important;
+  }
+
+  [data-theme="dark"] .table tbody tr,
+  [data-theme="dark"] .table-responsive .table tbody tr,
+  [data-theme="dark"] .card .table tbody tr {
+    background-color: #1e1e1e !important;
+    color: #ffffff !important;
+  }
+
+  [data-theme="dark"] .table tbody tr:hover,
+  [data-theme="dark"] .table-responsive .table tbody tr:hover,
+  [data-theme="dark"] .card .table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.075) !important;
+  }
+
+  [data-theme="dark"] .table td,
+  [data-theme="dark"] .table th,
+  [data-theme="dark"] .table-responsive .table td,
+  [data-theme="dark"] .table-responsive .table th,
+  [data-theme="dark"] .card .table td,
+  [data-theme="dark"] .card .table th {
+    border-color: #333333 !important;
+    color: #ffffff !important;
+  }
+
+  [data-theme="dark"] .list-group-item {
+    background-color: #1e1e1e !important;
+    color: #ffffff !important;
+    border-color: #333333 !important;
+  }
+
+  [data-theme="dark"] .card {
+    background-color: #1e1e1e !important;
+    border-color: #333333 !important;
+  }
+
+  [data-theme="dark"] .card-header {
+    background-color: #121212 !important;
+    border-color: #333333 !important;
+    color: #ffffff !important;
+  }
+
+  [data-theme="dark"] .card-body {
+    background-color: #1e1e1e !important;
+    color: #ffffff !important;
+  }
+
+  /* Light theme table styles - with stronger selectors */
+  [data-theme="light"] .table,
+  [data-theme="light"] .table-responsive .table,
+  [data-theme="light"] .card .table {
+    background-color: #ffffff !important;
+    color: #212529 !important;
+  }
+
+  [data-theme="light"] .table thead th,
+  [data-theme="light"] .table-responsive .table thead th,
+  [data-theme="light"] .card .table thead th {
+    background-color: #f8f9fa !important;
+    color: #212529 !important;
+    border-color: #dee2e6 !important;
+  }
+
+  [data-theme="light"] .table tbody tr,
+  [data-theme="light"] .table-responsive .table tbody tr,
+  [data-theme="light"] .card .table tbody tr {
+    background-color: #ffffff !important;
+    color: #212529 !important;
+  }
+
+  [data-theme="light"] .table tr:hover,
+  [data-theme="light"] .table-responsive .table tr:hover,
+  [data-theme="light"] .card .table tr:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+  }
+
+  [data-theme="light"] .table td,
+  [data-theme="light"] .table th,
+  [data-theme="light"] .table-responsive .table td,
+  [data-theme="light"] .table-responsive .table th,
+  [data-theme="light"] .card .table td,
+  [data-theme="light"] .card .table th {
+    border-color: #dee2e6 !important;
+    color: #212529 !important;
+  }
+
+  [data-theme="light"] .card {
+    background-color: #ffffff !important;
+    border-color: #dee2e6 !important;
+  }
+
+  [data-theme="light"] .card-header {
+    background-color: #f8f9fa !important;
+    border-color: #dee2e6 !important;
+    color: #212529 !important;
+  }
+
+  [data-theme="light"] .card-body {
+    background-color: #ffffff !important;
+    color: #212529 !important;
+  }
+
+  [data-theme="light"] .list-group-item {
+    background-color: #ffffff !important;
+    color: #212529 !important;
+    border-color: #dee2e6 !important;
   }
 </style>
-{% endblock %}
-
-{% block content %}
+{% endblock %} {% block content %}
 <div class="container">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h1>{{ dataset.name }}</h1>
-            <p class="lead">{{ dataset.description }}</p>
-        </div>
-        <div class="col-md-4 text-end">
-            <div class="btn-group">
-                <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">
-                    <i class="bi bi-arrow-left"></i> Back to Dashboard
-                </a>
-                <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-download"></i> Export
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="/export/{{ dataset.id }}?format=csv">CSV</a></li>
-                    <li><a class="dropdown-item" href="/export/{{ dataset.id }}?format=json">JSON</a></li>
-                </ul>
-            </div>
-            <div class="mt-2">
-                <a href="{{ url_for('data.view_charts', dataset_id=dataset.id) }}" class="btn btn-outline-info w-100">
-                    <i class="bi bi-bar-chart-line"></i> View Charts
-                </a>
-            </div>
-        </div>
+  <div class="row mb-4">
+    <div class="col-md-8">
+      <h1>{{ dataset.name }}</h1>
+      <p class="lead">{{ dataset.description }}</p>
     </div>
-        
-   
-    
-    <div class="row">
-        <!-- Main visualization area -->
-        <div class="col-md-9">
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5>Geographic Visualization</h5>
-                    <div>
-                        <select class="form-select form-select-sm" id="value-field" style="width: auto; display: inline-block;">
-                            <option value="cases">Cases</option>
-                            <option value="deaths">Deaths</option>
-                            <option value="recovered">Recovered</option>
-                            {% if 'tested' in numeric_fields %}
-                            <option value="tested">Tested</option>
-                            {% endif %}
-                        </select>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div id="map"></div>
-                </div>
-            </div>
-            
-            <div class="card">
-                <div class="card-header">
-                    <h5>Data Preview</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover">
-                            <thead>
-                                <tr>
-                                    {% for column in preview_columns %}
-                                    <th>{{ column }}</th>
-                                    {% endfor %}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for row in preview_data %}
-                                <tr>
-                                    {% for column in preview_columns %}
-                                    <td>{{ row.get(column, '') }}</td>
-                                    {% endfor %}
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Sidebar with dataset info -->
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Dataset Information</h5>
-                </div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Type
-                            <span class="badge bg-primary">{{ dataset.original_format|capitalize }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Records
-                            <span class="badge bg-primary">{{ dataset.record_count }}</span>
-                        </li>
-                        {% if dataset.date_range_start %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Date Range
-                            <span>{{ dataset.date_range_start.strftime('%Y-%m-%d') }} to {{ dataset.date_range_end.strftime('%Y-%m-%d') }}</span>
-                        </li>
-                        {% endif %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Uploaded
-                            <span>{{ dataset.upload_date.strftime('%Y-%m-%d') }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Visibility
-                            <span>
-                                {% if dataset.sharing_status == 'public' %}
-                                <span class="badge bg-success">Public</span>
-                                {% elif dataset.sharing_status == 'private' %}
-                                <span class="badge bg-secondary">Private</span>
-                                {% else %}
-                                <span class="badge bg-primary">Limited</span>
-                                {% endif %}
-                            </span>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
+    <div class="col-md-4 text-end">
+      <div class="btn-group">
+        <a
+          href="{{ url_for('main.dashboard') }}"
+          class="btn btn-outline-secondary"
+        >
+          <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+        <button
+          type="button"
+          class="btn btn-primary dropdown-toggle"
+          data-bs-toggle="dropdown"
+          aria-expanded="false"
+        >
+          <i class="bi bi-download"></i> Export
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li>
+            <a class="dropdown-item" href="/export/{{ dataset.id }}?format=csv"
+              >CSV</a
+            >
+          </li>
+          <li>
+            <a class="dropdown-item" href="/export/{{ dataset.id }}?format=json"
+              >JSON</a
+            >
+          </li>
+        </ul>
+      </div>
+      <div class="mt-2">
+        <a
+          href="{{ url_for('data.view_charts', dataset_id=dataset.id) }}"
+          class="btn btn-outline-info w-100"
+        >
+          <i class="bi bi-bar-chart-line"></i> View Charts
+        </a>
+      </div>
     </div>
+  </div>
+
+  <div class="row">
+    <!-- Main visualization area -->
+    <div class="col-md-9">
+      <div class="card mb-4">
+        <div
+          class="card-header d-flex justify-content-between align-items-center"
+        >
+          <h5>Geographic Visualization</h5>
+          <div>
+            <select
+              class="form-select form-select-sm"
+              id="value-field"
+              style="width: auto; display: inline-block"
+            >
+              <option value="cases">Cases</option>
+              <option value="deaths">Deaths</option>
+              <option value="recovered">Recovered</option>
+              {% if 'tested' in numeric_fields %}
+              <option value="tested">Tested</option>
+              {% endif %}
+            </select>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="map"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h5>Data Preview</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm table-hover">
+              <thead>
+                <tr>
+                  {% for column in preview_columns %}
+                  <th>{{ column }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in preview_data %}
+                <tr>
+                  {% for column in preview_columns %}
+                  <td>{{ row.get(column, '') }}</td>
+                  {% endfor %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar with dataset info -->
+    <div class="col-md-3">
+      <div class="card">
+        <div class="card-header">
+          <h5>Dataset Information</h5>
+        </div>
+        <div class="card-body">
+          <ul class="list-group list-group-flush">
+            <li
+              class="list-group-item d-flex justify-content-between align-items-center"
+            >
+              Type
+              <span class="badge bg-primary"
+                >{{ dataset.original_format|capitalize }}</span
+              >
+            </li>
+            <li
+              class="list-group-item d-flex justify-content-between align-items-center"
+            >
+              Records
+              <span class="badge bg-primary">{{ dataset.record_count }}</span>
+            </li>
+            {% if dataset.date_range_start %}
+            <li
+              class="list-group-item d-flex justify-content-between align-items-center"
+            >
+              Date Range
+              <span
+                >{{ dataset.date_range_start.strftime('%Y-%m-%d') }} to {{
+                dataset.date_range_end.strftime('%Y-%m-%d') }}</span
+              >
+            </li>
+            {% endif %}
+            <li
+              class="list-group-item d-flex justify-content-between align-items-center"
+            >
+              Uploaded
+              <span>{{ dataset.upload_date.strftime('%Y-%m-%d') }}</span>
+            </li>
+            <li
+              class="list-group-item d-flex justify-content-between align-items-center"
+            >
+              Visibility
+              <span>
+                {% if dataset.sharing_status == 'public' %}
+                <span class="badge bg-success">Public</span>
+                {% elif dataset.sharing_status == 'private' %}
+                <span class="badge bg-secondary">Private</span>
+                {% else %}
+                <span class="badge bg-primary">Limited</span>
+                {% endif %}
+              </span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Hidden data for JavaScript -->
-<div id="map-data" style="display: none;">{{ map_data|safe }}</div>
-<div id="trend-data" style="display: none;">{{ trend_data|safe }}</div>
-{% endblock %}
-
-{% block extra_js %}
+<div id="map-data" style="display: none">{{ map_data|safe }}</div>
+<div id="trend-data" style="display: none">{{ trend_data|safe }}</div>
+{% endblock %} {% block extra_js %}
 <!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+  crossorigin=""
+></script>
 
 <!-- Leaflet Marker Cluster -->
 <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
@@ -217,30 +379,162 @@
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+<!-- Theme handler for data preview -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Observer to watch for theme attribute changes
+    const observer = new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
+        if (mutation.attributeName === "data-theme") {
+          const currentTheme =
+            document.documentElement.getAttribute("data-theme");
+          updateDataPreviewTheme(currentTheme);
+        }
+      });
+    });
+
+    // Start observing the document element for data-theme attribute changes
+    observer.observe(document.documentElement, { attributes: true });
+
+    // Initial theme setup
+    const currentTheme = document.documentElement.getAttribute("data-theme");
+    updateDataPreviewTheme(currentTheme);
+
+    // Function to update data preview table styling
+    function updateDataPreviewTheme(theme) {
+      const previewTables = document.querySelectorAll(
+        ".table-responsive .table"
+      );
+
+      previewTables.forEach((table) => {
+        if (theme === "dark") {
+          // Force dark theme styles
+          table.classList.add("table-dark");
+          table.style.backgroundColor = "#1e1e1e";
+          table.style.color = "#ffffff";
+
+          // Apply to all cells and headers
+          const cells = table.querySelectorAll("th, td");
+          cells.forEach((cell) => {
+            cell.style.backgroundColor = "#1e1e1e";
+            cell.style.color = "#ffffff";
+            cell.style.borderColor = "#333333";
+          });
+
+          // Style headers specifically
+          const headers = table.querySelectorAll("thead th");
+          headers.forEach((header) => {
+            header.style.backgroundColor = "#121212";
+            header.style.color = "#ffffff";
+            header.style.borderColor = "#333333";
+          });
+        } else {
+          // Force light theme styles
+          table.classList.remove("table-dark");
+          table.style.backgroundColor = "#ffffff";
+          table.style.color = "#212529";
+
+          // Apply to all cells and headers
+          const cells = table.querySelectorAll("th, td");
+          cells.forEach((cell) => {
+            cell.style.backgroundColor = "";
+            cell.style.color = "#212529";
+            cell.style.borderColor = "#dee2e6";
+          });
+
+          // Style headers specifically
+          const headers = table.querySelectorAll("thead th");
+          headers.forEach((header) => {
+            header.style.backgroundColor = "#f8f9fa";
+            header.style.color = "#212529";
+            header.style.borderColor = "#dee2e6";
+          });
+        }
+      });
+    }
+
+    // Create global resetToLightMode function that the base template can call
+    window.resetToLightMode = function () {
+      // Force light theme on all preview tables
+      const previewTables = document.querySelectorAll(
+        ".table-responsive .table"
+      );
+
+      previewTables.forEach((table) => {
+        // Remove dark theme classes
+        table.classList.remove("table-dark");
+        table.style.backgroundColor = "#ffffff";
+        table.style.color = "#212529";
+
+        // Reset all cells
+        const cells = table.querySelectorAll("th, td");
+        cells.forEach((cell) => {
+          cell.style.backgroundColor = "";
+          cell.style.color = "#212529";
+          cell.style.borderColor = "#dee2e6";
+        });
+
+        // Style headers specifically
+        const headers = table.querySelectorAll("thead th");
+        headers.forEach((header) => {
+          header.style.backgroundColor = "#f8f9fa";
+          header.style.color = "#212529";
+          header.style.borderColor = "#dee2e6";
+        });
+      });
+
+      // Reset card styling
+      document.querySelectorAll(".card").forEach((card) => {
+        card.style.backgroundColor = "#ffffff";
+        card.style.color = "#212529";
+        card.style.borderColor = "#dee2e6";
+      });
+
+      document.querySelectorAll(".card-header").forEach((header) => {
+        header.style.backgroundColor = "#f8f9fa";
+        header.style.color = "#212529";
+        header.style.borderColor = "#dee2e6";
+      });
+
+      document.querySelectorAll(".card-body").forEach((body) => {
+        body.style.backgroundColor = "#ffffff";
+        body.style.color = "#212529";
+      });
+
+      // Reset list group items
+      document.querySelectorAll(".list-group-item").forEach((item) => {
+        item.style.backgroundColor = "#ffffff";
+        item.style.color = "#212529";
+        item.style.borderColor = "#dee2e6";
+      });
+    };
+  });
+</script>
+
 <!-- Debugging output -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener("DOMContentLoaded", function () {
     console.log("Document loaded. Checking map data...");
-    const mapDataElement = document.getElementById('map-data');
+    const mapDataElement = document.getElementById("map-data");
     if (mapDataElement) {
-        console.log("Map data element found:", mapDataElement);
-        const rawData = mapDataElement.textContent || '[]';
-        console.log("First 100 chars of map data:", rawData.substring(0, 100));
-        try {
-            const parsedData = JSON.parse(rawData);
-            console.log("Map data parsed successfully. Points:", parsedData.length);
-            if (parsedData.length > 0) {
-                console.log("First point:", parsedData[0]);
-            }
-        } catch(e) {
-            console.error("Error parsing map data:", e);
+      console.log("Map data element found:", mapDataElement);
+      const rawData = mapDataElement.textContent || "[]";
+      console.log("First 100 chars of map data:", rawData.substring(0, 100));
+      try {
+        const parsedData = JSON.parse(rawData);
+        console.log("Map data parsed successfully. Points:", parsedData.length);
+        if (parsedData.length > 0) {
+          console.log("First point:", parsedData[0]);
         }
+      } catch (e) {
+        console.error("Error parsing map data:", e);
+      }
     } else {
-        console.error("Map data element not found!");
+      console.error("Map data element not found!");
     }
-    
-    console.log("Map container element:", document.getElementById('map'));
-});
+
+    console.log("Map container element:", document.getElementById("map"));
+  });
 </script>
 
 <!-- Enhanced Map Script -->

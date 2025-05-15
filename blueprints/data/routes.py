@@ -529,6 +529,111 @@ def view_charts(dataset_id):
         chart_fields=chart_fields
     )
 
+# ---------------------------------------------------------
+# Multiple Dataset Export Route
+# ---------------------------------------------------------
+@data_bp.route('/export/multiple', methods=['POST'])
+@login_required
+def export_multiple_datasets():
+    # Get dataset IDs from form
+    dataset_ids = request.form.getlist('dataset_ids')
+    if not dataset_ids:
+        flash('No datasets selected', 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    # Get export format
+    export_format = request.args.get('format', 'csv')
+    if export_format not in ['csv', 'json']:
+        flash('Unsupported export format for multiple datasets', 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    # Collect data from all datasets
+    all_data = []
+    for dataset_id in dataset_ids:
+        dataset = db.session.get(Dataset, int(dataset_id))
+        if not dataset:
+            continue
+            
+        # Check permission
+        is_owner = dataset.user_id == current_user.id
+        is_shared = SharedDataset.query.filter_by(dataset_id=dataset_id, shared_with_id=current_user.id).first() is not None
+        is_public = dataset.sharing_status == 'public'
+        
+        if not (is_owner or is_shared or is_public):
+            continue  # Skip datasets the user doesn't have access to
+        
+        # Get data from dataset
+        data = dataset.get_data()
+        
+        # Add dataset identifier to each record
+        for record in data:
+            record['dataset_name'] = dataset.name
+            record['dataset_id'] = dataset.id
+        
+        all_data.extend(data)
+    
+    if not all_data:
+        flash('No accessible datasets found', 'error')
+        return redirect(url_for('main.dashboard'))
+    
+    # Generate timestamp for filename
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    
+    # Export based on format
+    if export_format == 'csv':
+        # Convert to DataFrame for easy CSV export
+        df = pd.DataFrame(all_data)
+        output = io.StringIO()
+        df.to_csv(output, index=False)
+        
+        # Create file-like object
+        mem = io.BytesIO()
+        mem.write(output.getvalue().encode('utf-8'))
+        mem.seek(0)
+        
+        # Log the activity
+        audit = AuditLog(
+            user_id=current_user.id,
+            action="export_multiple_datasets",
+            target_type="Dataset",
+            target_id=0,  # No single target ID
+            details=f"Exported {len(dataset_ids)} datasets as CSV"
+        )
+        db.session.add(audit)
+        db.session.commit()
+        
+        return send_file(
+            mem,
+            download_name=f"datasets_export_{timestamp}.csv",
+            as_attachment=True,
+            mimetype='text/csv'
+        )
+    
+    elif export_format == 'json':
+        # Prepare JSON data
+        json_data = json.dumps(all_data, indent=2)
+        mem = io.BytesIO()
+        mem.write(json_data.encode('utf-8'))
+        mem.seek(0)
+        
+        # Log the activity
+        audit = AuditLog(
+            user_id=current_user.id,
+            action="export_multiple_datasets",
+            target_type="Dataset",
+            target_id=0,  # No single target ID
+            details=f"Exported {len(dataset_ids)} datasets as JSON"
+        )
+        db.session.add(audit)
+        db.session.commit()
+        
+        return send_file(
+            mem,
+            download_name=f"datasets_export_{timestamp}.json",
+            as_attachment=True,
+            mimetype='application/json'
+        )
+
 # --------------------------------------------
 # Helper Functions
 # --------------------------------------------
