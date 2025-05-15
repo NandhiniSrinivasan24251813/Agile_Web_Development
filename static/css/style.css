@@ -1829,6 +1829,19 @@ footer ul.list-unstyled li a:hover i {
   border: 1px solid #ccc;
 }
 
+[data-theme="dark"] select.form-select,
+[data-theme="dark"] .form-select {
+  background-color: var(--bg-tertiary, #1e1e1e);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] select.form-select option,
+[data-theme="dark"] .form-select option {
+  background-color: var(--bg-tertiary, #1e1e1e);
+  color: var(--text-primary);
+}
+
 /* ===================== */
 /* Flash Message Styling */
 /* ===================== */
