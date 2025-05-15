@@ -26,18 +26,12 @@ def upgrade():
                                       nullable=True))
         batch_op.add_column(sa.Column('data_json', sa.Text(), nullable=True))
 
-    op.execute("""
-        UPDATE datasets
-        SET original_filename = filename,
-            original_format   = file_type
-    """)
-
     with op.batch_alter_table('datasets') as batch_op:
         batch_op.alter_column('original_filename',
                               existing_type=sa.String(255),
                               nullable=False)
         batch_op.drop_column('filename')
-        batch_op.drop_column('file_type')
+        # batch_op.drop_column('file_type')
         batch_op.drop_column('filepath')
 
     with op.batch_alter_table('users') as batch_op:
