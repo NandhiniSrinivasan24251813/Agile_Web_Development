@@ -21,6 +21,7 @@ System{% endblock %} {% block extra_css %}
     position: relative !important;
     z-index: 9998 !important;
   }
+
 </style>
 
 {% endblock %} {% block content %}
@@ -99,14 +100,14 @@ System{% endblock %} {% block extra_css %}
                     <div class="btn-group btn-group-sm">
                       <a
                         href="{{ url_for('data.visualize', dataset_id=dataset.id) }}"
-                        class="btn btn-primary"
+                        class="btn btn-outline-secondary d-flex flex-column align-items-center justify-content-center px-1"
                       >
                         <i class="bi bi-graph-up"></i> View
                       </a>
                       <!-- Share Button triggers modal -->
                       <button
-                        type="button"
-                        class="btn btn-outline-success"
+                        type="button" 
+                        class="btn btn-outline-secondary d-flex flex-column align-items-center justify-content-center px-1"
                         data-bs-toggle="modal"
                         data-bs-target="#shareModal{{ dataset.id }}"
                       >
@@ -114,10 +115,12 @@ System{% endblock %} {% block extra_css %}
                       </button>
                       <button
                         type="button"
-                        class="btn btn-outline-primary dropdown-toggle dropdown-toggle-split"
+                        class="btn btn-sm btn-outline-secondary dropdown-toggle d-flex flex-column align-items-center justify-content-center px-1"
                         data-bs-toggle="dropdown"
                         aria-expanded="false"
-                      >
+                        >
+                        <i class="bi bi-download"></i>Export
+                      
                         <span class="visually-hidden">Toggle Dropdown</span>
                       </button>
                       <ul class="dropdown-menu dropdown-menu-end">
@@ -438,5 +441,7 @@ System{% endblock %} {% block extra_css %}
     });
   });
 </script>
+
+
 
 {% endblock %}
