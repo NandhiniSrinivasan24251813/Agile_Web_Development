@@ -11,7 +11,7 @@ from flask_mail import Mail
 # Initialize the main Flask application
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-change-this'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///epidemic.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = r'sqlite:///D:\Agile_Web_Development\instance\epidemic.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 app.config['DATA_FOLDER'] = os.path.join('static', 'data')
