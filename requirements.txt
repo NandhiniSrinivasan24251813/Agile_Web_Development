@@ -17,3 +17,6 @@ WTForms
 twilio
 flask_mail
 pyotp
+selenium
+pytest
+webdriver-manager
