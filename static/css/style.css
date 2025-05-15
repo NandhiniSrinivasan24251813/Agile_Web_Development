@@ -567,9 +567,23 @@ textarea:focus {
   }
 }
 
-[data-theme="dark"] {
-  animation: fadeIn 0.5s ease-out;
+[data-theme="dark"] .card-body table {
+  background-color: #1c1c1c !important;
+  color: var(--text-primary) !important;
+  border-color: #444 !important;
 }
+
+[data-theme="dark"] .card-body table td,
+[data-theme="dark"] .card-body table th {
+  color: var(--text-primary) !important;
+  background-color: #1c1c1c !important;
+  border-color: #444 !important;
+}
+
+[data-theme="dark"] .card-body table tbody tr:hover {
+  background-color: #2a2a2a !important;
+}
+
 
 html:not([data-theme="dark"]) {
   animation: fadeIn 0.5s ease-out;
@@ -1092,6 +1106,14 @@ a:hover {
   box-shadow: var(--shadow-md);
 }
 
+.btn:hover {
+  text-decoration: underline;
+}
+
+[data-theme="dark"] .btn:hover {
+  text-decoration: underline;
+}
+
 .btn i {
   margin-right: 0.5rem;
 }
@@ -1110,6 +1132,36 @@ a:hover {
 .bg-primary .btn-outline-light:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
+
+.btn-outline-secondary,
+.btn-outline-info {
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  background-color: transparent;
+  transition: var(--transition-base);
+}
+
+.btn-outline-secondary:hover,
+.btn-outline-info:hover {
+  background-color: var(--gray-100);
+  color: var(--primary-color);
+  text-decoration: underline;
+}
+
+[data-theme="dark"] .btn-outline-secondary,
+[data-theme="dark"] .btn-outline-info {
+  border-color: var(--border-color);
+  color: var(--text-primary);
+  background-color: transparent;
+}
+
+[data-theme="dark"] .btn-outline-secondary:hover,
+[data-theme="dark"] .btn-outline-info:hover {
+  background-color: #2a2a2a;
+  color: #3da9fc;
+  text-decoration: underline;
+}
+
 
 /* ===================== */
 /* Form Styling */
