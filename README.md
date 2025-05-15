@@ -134,9 +134,26 @@ python app.py
 
 ```
 
+## System tests
+
+```
+pytest -v 
+```
+for system tests(login/signup/checking dashboard.etc)
+
+
 ## Sample User Flow
 1. User signs up → receives OTP on email → logs in.
 2. Uploads dataset → auto-detected fields & date ranges.
 3. Views data on map → filters by cases, deaths, recovered.
 4. Shares dataset with another user via email lookup.
 5. Downloads insights as CSV and JSON.
+
+## Contributors
+
+| UWA ID   | Name               | GitHub Username         |
+|----------|--------------------|--------------------------|
+| 24251813 | Nandhini Srinivasan| Nandhini Srinivasan      |
+| 24476099 | Harpreet Singh     | harpreet12345678singh    |
+| 24060283 | Swapnil Gaikwad    | SwapyG                   |
+| 23911598 | Terran Deng        | TerranConfederacy        |
