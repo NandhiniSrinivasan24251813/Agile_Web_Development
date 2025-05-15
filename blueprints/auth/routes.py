@@ -107,8 +107,9 @@ def signup():
             db.session.commit()
             session['user_id'] = new_user.id 
             flash('Account created successfully! Welcome email and otp sent.', 'success')
+            print("Account created successfully! Welcome email and otp sent.")
             # return redirect(url_for('login'))
-            return redirect(url_for('verify_otp'))
+            return redirect(url_for('auth.verify_otp'))
         except Exception as e:
             db.session.rollback()
             flash('An error occurred. Please try again.', 'error')
