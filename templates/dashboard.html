@@ -441,7 +441,32 @@ System{% endblock %} {% block extra_css %}
     });
   });
 </script>
-
+<script>
+  document.addEventListener("click", function (event) {
+    const dropdowns = document.querySelectorAll(".table .dropdown-menu.show");
+    dropdowns.forEach(function (dropdown) {
+      if (!dropdown.contains(event.target) && !dropdown.previousElementSibling.contains(event.target)) {
+        dropdown.classList.remove("show");
+        dropdown.style.display = "none";
+        dropdown.style.opacity = "";
+        dropdown.style.visibility = "";
+        dropdown.style.zIndex = "";
+      }
+    });
+  });
+</script>
+<script>
+  document.querySelectorAll(".table .dropdown-menu .dropdown-item, .table .dropdown-menu button").forEach(function (item) {
+    item.addEventListener("click", function () {
+      const dropdown = item.closest(".dropdown-menu");
+      dropdown.classList.remove("show");
+      dropdown.style.display = "none";
+      dropdown.style.opacity = "";
+      dropdown.style.visibility = "";
+      dropdown.style.zIndex = "";
+    });
+  });
+</script>
 
 
 {% endblock %}
