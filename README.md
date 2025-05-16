@@ -65,21 +65,61 @@ This system emphasizes:
 ---
 
 ## Folder Structure
-epidemic-monitoring/
-├── static/                      # Static assets
-│   ├── css/                    # Stylesheets (not expanded in screenshot)
-│   ├── data/                   # Data assets (not expanded in screenshot)
-│   └── js/                     # JavaScript files for frontend interactivity
-│       ├── Insight-generator.js
-│       ├── loading.js
-│       ├── map.js
-│       ├── submission-handler.js
-│       └── theme-toggle.js
-│
-├── uploads/                    # Uploaded datasets (user-generated content)
-│
-├── templates/                  # HTML templates (Jinja2) for Flask rendering
-│   ├── base.html               # Base layout with template inheritance
+Agile_Web_Development/
+├── __init__.py
+├── app.py
+├── data_bridge.py
+├── forms.py
+├── models.py
+├── utils.py
+├── README.md
+├── requirements.txt
+├── .gitignore
+├── .venv/
+├── .pytest_cache/
+├── __pycache__/
+├── assets/
+│   └── ERD.jpg
+├── instance/
+│   └── .gitkeep
+├── migrations/
+│   ├── versions/
+│   ├── alembic.ini
+│   ├── env.py
+│   ├── README
+│   └── script.py.mako
+├── blueprints/
+│   ├── __init__.py
+│   ├── api/
+│   │   ├── __init__.py
+│   │   └── routes.py
+│   ├── auth/
+│   │   ├── __init__.py
+│   │   └── routes.py
+│   ├── data/
+│   │   ├── __init__.py
+│   │   └── routes.py
+│   └── profile/
+│       ├── __init__.py
+│       └── routes.py
+├── static/
+│   ├── css/
+│   │   ├── charts.css
+│   │   ├── map.css
+│   │   ├── style.css
+│   │   └── table-style.css
+│   ├── js/
+│   │   ├── charts.js
+│   │   ├── Insight-generator.js
+│   │   ├── loading.js
+│   │   ├── map.js
+│   │   ├── submission-handler.js
+│   │   └── theme-toggle.js
+│   ├── data/
+│   └── uploads/
+├── templates/
+│   ├── base.html
+│   ├── charts.html
 │   ├── dashboard.html
 │   ├── debug_file.html
 │   ├── edit_profile.html
@@ -98,7 +138,17 @@ epidemic-monitoring/
 │   ├── upload.html
 │   ├── verify_otp.html
 │   └── visualize.html
-│
+├── tests/
+│   ├── test_basics.py
+│   └── sys_test/
+│       ├── conftest.py
+│       ├── run_tests.py
+│       ├── signup_form.png
+│       ├── test_auth.py
+│       ├── test_dashboard.py
+│       ├── test_upload.py
+│       └── test_visualization.py
+│── __init__.py
 ├── .gitignore                  # Git ignored files
 ├── app.py                      # Main Flask application
 ├── data_bridge.py              # Data I/O and transformation logic
