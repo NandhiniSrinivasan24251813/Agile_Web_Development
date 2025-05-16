@@ -170,10 +170,12 @@ git clone https://github.com/NandhiniSrinivasan24251813/Agile_Web_Development
 cd epidemic-monitoring
 
 python -m venv venv
-source venv/bin/activate   # On Windows: venv\Scripts\activate
+source venv/bin/activate   # On Windows: venv\Scripts\activate, or powershell
 
 pip install -r requirements.txt
 
+# Make sure the environment is at root(important!)
+$env:PYTHONPATH = "."
 
 ## Initialize the database
 flask db init
