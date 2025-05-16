@@ -64,6 +64,10 @@ This system emphasizes:
 
 ---
 
+## ERD
+
+![ERD](assets/ERD.jpg)
+
 ## Folder Structure
 Agile_Web_Development/
 ├── __init__.py
